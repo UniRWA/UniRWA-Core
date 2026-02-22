@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
+import { useAccount, useConnect, useDisconnect, useSwitchChain } from 'wagmi';
+import { avalancheFuji } from 'wagmi/chains';
 
 const NAV_LINKS = [
     { href: '/', label: 'Markets' },
@@ -12,9 +14,20 @@ const NAV_LINKS = [
     { href: '/portfolio', label: 'Portfolio' },
 ];
 
+function truncateAddress(address: string) {
+    return `${address.slice(0, 6)}…${address.slice(-4)}`;
+}
+
 export default function Navbar() {
     const [mobileOpen, setMobileOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+
+    const { address, isConnected, chain } = useAccount();
+    const { connect, connectors } = useConnect();
+    const { disconnect } = useDisconnect();
+    const { switchChain } = useSwitchChain();
+
+    const isWrongNetwork = isConnected && chain?.id !== avalancheFuji.id;
 
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 80);
@@ -22,6 +35,20 @@ export default function Navbar() {
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
+
+    // Auto-prompt to switch to Fuji when on wrong network
+    useEffect(() => {
+        if (isWrongNetwork) {
+            switchChain({ chainId: avalancheFuji.id });
+        }
+    }, [isWrongNetwork, switchChain]);
+
+    const handleConnect = () => {
+        const connector = connectors[0];
+        if (connector) {
+            connect({ connector });
+        }
+    };
 
     return (
         <motion.nav
@@ -66,17 +93,40 @@ export default function Navbar() {
                         ))}
                     </div>
 
-                    {/* Connect Wallet Button — Desktop */}
-                    <div className="hidden md:block">
-                        <button
-                            className="px-6 py-2.5 rounded-full text-white text-sm font-semibold transition-all duration-300"
-                            style={{
-                                background: 'linear-gradient(135deg, #FF5C16, #FF8A50)',
-                                boxShadow: '0 4px 24px rgba(255,92,22,0.4)',
-                            }}
-                        >
-                            Connect Wallet
-                        </button>
+                    {/* Wallet Button — Desktop */}
+                    <div className="hidden md:flex items-center gap-2">
+                        {/* Wrong network banner */}
+                        {isWrongNetwork && (
+                            <button
+                                onClick={() => switchChain({ chainId: avalancheFuji.id })}
+                                className="px-3 py-1.5 rounded-full text-xs font-semibold bg-red-500/90 text-white animate-pulse"
+                            >
+                                Switch to Fuji
+                            </button>
+                        )}
+
+                        {isConnected ? (
+                            <button
+                                onClick={() => disconnect()}
+                                className="px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 bg-white/10 backdrop-blur-sm border border-white/20"
+                                style={{
+                                    color: scrolled ? '#0F0F1A' : '#fff',
+                                }}
+                            >
+                                {truncateAddress(address!)}
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleConnect}
+                                className="px-6 py-2.5 rounded-full text-white text-sm font-semibold transition-all duration-300"
+                                style={{
+                                    background: 'linear-gradient(135deg, #FF5C16, #FF8A50)',
+                                    boxShadow: '0 4px 24px rgba(255,92,22,0.4)',
+                                }}
+                            >
+                                Connect Wallet
+                            </button>
+                        )}
                     </div>
 
                     {/* Mobile Hamburger */}
@@ -113,15 +163,36 @@ export default function Navbar() {
                                     {link.label}
                                 </Link>
                             ))}
-                            <button
-                                className="w-full mt-2 px-6 py-2.5 rounded-full text-white text-sm font-semibold"
-                                style={{
-                                    background: 'linear-gradient(135deg, #FF5C16, #FF8A50)',
-                                    boxShadow: '0 4px 24px rgba(255,92,22,0.4)',
-                                }}
-                            >
-                                Connect Wallet
-                            </button>
+
+                            {/* Wrong network banner — mobile */}
+                            {isWrongNetwork && (
+                                <button
+                                    onClick={() => switchChain({ chainId: avalancheFuji.id })}
+                                    className="w-full py-2.5 rounded-full text-xs font-semibold bg-red-500 text-white"
+                                >
+                                    ⚠ Wrong Network — Switch to Fuji
+                                </button>
+                            )}
+
+                            {isConnected ? (
+                                <button
+                                    onClick={() => disconnect()}
+                                    className="w-full mt-2 px-6 py-2.5 rounded-full text-sm font-semibold bg-gray-100 text-gray-700"
+                                >
+                                    {truncateAddress(address!)} — Disconnect
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={handleConnect}
+                                    className="w-full mt-2 px-6 py-2.5 rounded-full text-white text-sm font-semibold"
+                                    style={{
+                                        background: 'linear-gradient(135deg, #FF5C16, #FF8A50)',
+                                        boxShadow: '0 4px 24px rgba(255,92,22,0.4)',
+                                    }}
+                                >
+                                    Connect Wallet
+                                </button>
+                            )}
                         </div>
                     </motion.div>
                 )}
