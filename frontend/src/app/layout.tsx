@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Providers from "@/components/Providers";
+import PageTransition from "@/components/PageTransition";
+import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,7 +24,10 @@ export default function RootLayout({
       <body className={`${inter.className} bg-brand-cream`}>
         <Providers>
           <Navbar />
-          <main>{children}</main>
+          <main>
+            <PageTransition>{children}</PageTransition>
+          </main>
+          <Toaster />
         </Providers>
       </body>
     </html>

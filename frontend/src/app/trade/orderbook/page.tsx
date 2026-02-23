@@ -2,7 +2,9 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
+import StatusBadge from '@/components/StatusBadge';
 
 /* ------------------------------------------------------------------ */
 /*  Hardcoded data                                                     */
@@ -34,6 +36,12 @@ export default function OrderbookPage() {
     const [orderType, setOrderType] = useState<'limit' | 'market'>('limit');
     const [price, setPrice] = useState('1.0038');
     const [orderAmount, setOrderAmount] = useState('');
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setLoading(false), 1500);
+        return () => clearTimeout(timer);
+    }, []);
 
     const numericPrice = parseFloat(price) || 0;
     const numericAmount = parseFloat(orderAmount) || 0;
@@ -101,49 +109,75 @@ export default function OrderbookPage() {
                             <span>Amount</span>
                         </div>
 
-                        {/* Sell orders (asks) — highest to lowest */}
-                        <div className="space-y-0.5 mb-3">
-                            {SELLS.map((order, i) => (
-                                <div key={i} className="relative flex justify-between items-center py-1.5 px-2 rounded text-sm">
-                                    <div
-                                        className="absolute inset-0 rounded opacity-20"
-                                        style={{
-                                            background: '#EF4444',
-                                            width: `${(order.amount / maxSell) * 100}%`,
-                                            right: 0,
-                                            left: 'auto',
-                                        }}
-                                    />
-                                    <span className="relative text-red-500 font-mono font-medium">{order.price.toFixed(4)}</span>
-                                    <span className="relative text-gray-700 font-mono">{order.amount.toLocaleString()}</span>
+                        {loading ? (
+                            <>
+                                <div className="space-y-1 mb-3">
+                                    {[1, 2, 3, 4, 5].map((n) => (
+                                        <div key={n} className="flex justify-between items-center py-1.5 px-2">
+                                            <Skeleton className="h-4 w-16" />
+                                            <Skeleton className="h-4 w-14" />
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
-
-                        {/* Spread */}
-                        <div className="flex items-center justify-center gap-2 py-2 border-y border-gray-100 mb-3">
-                            <span className="text-xs text-gray-400">Spread</span>
-                            <span className="text-sm font-bold text-gray-900">${spread.toFixed(4)}</span>
-                        </div>
-
-                        {/* Buy orders (bids) — highest to lowest */}
-                        <div className="space-y-0.5">
-                            {BUYS.map((order, i) => (
-                                <div key={i} className="relative flex justify-between items-center py-1.5 px-2 rounded text-sm">
-                                    <div
-                                        className="absolute inset-0 rounded opacity-20"
-                                        style={{
-                                            background: '#22C55E',
-                                            width: `${(order.amount / maxBuy) * 100}%`,
-                                            right: 0,
-                                            left: 'auto',
-                                        }}
-                                    />
-                                    <span className="relative text-green-600 font-mono font-medium">{order.price.toFixed(4)}</span>
-                                    <span className="relative text-gray-700 font-mono">{order.amount.toLocaleString()}</span>
+                                <div className="flex items-center justify-center gap-2 py-2 border-y border-gray-100 mb-3">
+                                    <Skeleton className="h-4 w-24" />
                                 </div>
-                            ))}
-                        </div>
+                                <div className="space-y-1">
+                                    {[1, 2, 3, 4, 5].map((n) => (
+                                        <div key={n} className="flex justify-between items-center py-1.5 px-2">
+                                            <Skeleton className="h-4 w-16" />
+                                            <Skeleton className="h-4 w-14" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                {/* Sell orders (asks) */}
+                                <div className="space-y-0.5 mb-3">
+                                    {SELLS.map((order, i) => (
+                                        <div key={i} className="relative flex justify-between items-center py-1.5 px-2 rounded text-sm">
+                                            <div
+                                                className="absolute inset-0 rounded opacity-20"
+                                                style={{
+                                                    background: '#EF4444',
+                                                    width: `${(order.amount / maxSell) * 100}%`,
+                                                    right: 0,
+                                                    left: 'auto',
+                                                }}
+                                            />
+                                            <span className="relative text-red-500 font-mono font-medium">{order.price.toFixed(4)}</span>
+                                            <span className="relative text-gray-700 font-mono">{order.amount.toLocaleString()}</span>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Spread */}
+                                <div className="flex items-center justify-center gap-2 py-2 border-y border-gray-100 mb-3">
+                                    <span className="text-xs text-gray-400">Spread</span>
+                                    <span className="text-sm font-bold text-gray-900">${spread.toFixed(4)}</span>
+                                </div>
+
+                                {/* Buy orders (bids) */}
+                                <div className="space-y-0.5">
+                                    {BUYS.map((order, i) => (
+                                        <div key={i} className="relative flex justify-between items-center py-1.5 px-2 rounded text-sm">
+                                            <div
+                                                className="absolute inset-0 rounded opacity-20"
+                                                style={{
+                                                    background: '#22C55E',
+                                                    width: `${(order.amount / maxBuy) * 100}%`,
+                                                    right: 0,
+                                                    left: 'auto',
+                                                }}
+                                            />
+                                            <span className="relative text-green-600 font-mono font-medium">{order.price.toFixed(4)}</span>
+                                            <span className="relative text-gray-700 font-mono">{order.amount.toLocaleString()}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        )}
                     </motion.div>
 
                     {/* MIDDLE — Place order form */}
@@ -259,14 +293,7 @@ export default function OrderbookPage() {
                                         {MY_ORDERS.map((order) => (
                                             <tr key={order.id} className="border-b border-gray-50">
                                                 <td className="py-3">
-                                                    <span
-                                                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${order.type === 'buy'
-                                                            ? 'bg-green-50 text-green-700'
-                                                            : 'bg-red-50 text-red-700'
-                                                            }`}
-                                                    >
-                                                        {order.type}
-                                                    </span>
+                                                    <StatusBadge status={order.type as 'buy' | 'sell'} />
                                                 </td>
                                                 <td className="py-3 text-right font-mono text-gray-700">{order.price.toFixed(4)}</td>
                                                 <td className="py-3 text-right text-gray-700">{order.amount.toLocaleString()}</td>
