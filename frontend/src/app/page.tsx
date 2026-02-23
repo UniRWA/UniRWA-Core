@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { motion, useInView } from 'framer-motion';
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { ShieldCheck, Users, Zap } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 /* ------------------------------------------------------------------ */
 /*  Hardcoded data                                                     */
@@ -48,8 +49,129 @@ function Reveal({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
 }
 
 /* ------------------------------------------------------------------ */
-/*  Page                                                               */
+/*  Skeleton loading card for assets                                   */
 /* ------------------------------------------------------------------ */
+function SkeletonAssetCard() {
+  return (
+    <div className="bg-white rounded-2xl overflow-hidden shadow-md border-l-4 border-l-gray-200 p-6">
+      <div className="mb-4">
+        <Skeleton className="h-5 w-20 mb-2" />
+        <Skeleton className="h-4 w-44 mb-1" />
+        <Skeleton className="h-3 w-28" />
+      </div>
+      <div className="flex items-baseline gap-2 mb-5">
+        <Skeleton className="h-8 w-20" />
+        <Skeleton className="h-3 w-8" />
+      </div>
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        {[1, 2, 3].map((n) => (
+          <div key={n}>
+            <Skeleton className="h-3 w-12 mb-1.5" />
+            <Skeleton className="h-4 w-16" />
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-3">
+        <Skeleton className="h-10 flex-1 rounded-xl" />
+        <Skeleton className="h-10 flex-1 rounded-xl" />
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Asset grid with loading state                                      */
+/* ------------------------------------------------------------------ */
+function AssetGrid() {
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {[1, 2, 3].map((n) => (
+          <SkeletonAssetCard key={n} />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      {ASSETS.map((asset, i) => (
+        <Reveal key={asset.symbol} delay={i * 0.1}>
+          <div className={`group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer border-l-4 ${BORDER_COLORS[asset.symbol]}`}>
+            <div className="p-6">
+              <div className="mb-4">
+                <h3 className="text-lg font-bold text-gray-900">{asset.symbol}</h3>
+                <p className="text-sm text-gray-500">{asset.name}</p>
+                <p className="text-xs text-gray-400 mt-0.5">by {asset.issuer}</p>
+              </div>
+              <div className="flex items-baseline gap-2 mb-5">
+                <p
+                  className="text-3xl font-black"
+                  style={{
+                    background: 'linear-gradient(135deg, #FF5C16, #D075FF)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                  }}
+                >
+                  {asset.apy}
+                </p>
+                <span className="text-xs text-gray-400 uppercase tracking-wider">APY</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-50 text-green-600">
+                  {asset.change}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div>
+                  <p className="text-xs text-gray-400 uppercase tracking-wider">NAV</p>
+                  <p className="text-sm font-semibold text-gray-900 flex items-center gap-1">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                    <span className="text-xs text-green-500 font-bold mr-0.5">LIVE</span>
+                    {asset.nav}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 uppercase tracking-wider">TVL</p>
+                  <p className="text-sm font-semibold text-gray-900">{asset.tvl}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 uppercase tracking-wider">Min Deposit</p>
+                  <p className="text-sm font-semibold text-gray-900">{asset.minDeposit}</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Link
+                  href={`/assets/${asset.symbol}`}
+                  className="flex-1 text-center py-2.5 rounded-xl text-sm font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                >
+                  Details
+                </Link>
+                <Link
+                  href="/pools"
+                  className="flex-1 text-center py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-300"
+                  style={{
+                    background: 'linear-gradient(135deg, #FF5C16, #FF8A50)',
+                  }}
+                >
+                  Join Pool
+                </Link>
+              </div>
+            </div>
+          </div>
+        </Reveal>
+      ))}
+    </div>
+  );
+}
+
+
 export default function HomePage() {
   return (
     <div className="-mt-16">
@@ -225,83 +347,11 @@ export default function HomePage() {
             </div>
           </Reveal>
 
-          {/* ── Asset cards (Change 4) ── */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {ASSETS.map((asset, i) => (
-              <Reveal key={asset.symbol} delay={i * 0.1}>
-                <div className={`group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer border-l-4 ${BORDER_COLORS[asset.symbol]}`}>
-                  <div className="p-6">
-                    {/* Header */}
-                    <div className="mb-4">
-                      <h3 className="text-lg font-bold text-gray-900">{asset.symbol}</h3>
-                      <p className="text-sm text-gray-500">{asset.name}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">by {asset.issuer}</p>
-                    </div>
-
-                    {/* APY — large gradient with change badge inline */}
-                    <div className="flex items-baseline gap-2 mb-5">
-                      <p
-                        className="text-3xl font-black"
-                        style={{
-                          background: 'linear-gradient(135deg, #FF5C16, #D075FF)',
-                          WebkitBackgroundClip: 'text',
-                          WebkitTextFillColor: 'transparent',
-                          backgroundClip: 'text',
-                        }}
-                      >
-                        {asset.apy}
-                      </p>
-                      <span className="text-xs text-gray-400 uppercase tracking-wider">APY</span>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-50 text-green-600">
-                        {asset.change}
-                      </span>
-                    </div>
-
-                    {/* Stats grid — 3 items now: NAV (with live dot), TVL, Min Deposit */}
-                    <div className="grid grid-cols-3 gap-4 mb-6">
-                      <div>
-                        <p className="text-xs text-gray-400 uppercase tracking-wider">NAV</p>
-                        <p className="text-sm font-semibold text-gray-900 flex items-center gap-1">
-                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                          <span className="text-xs text-green-500 font-bold mr-0.5">LIVE</span>
-                          {asset.nav}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400 uppercase tracking-wider">TVL</p>
-                        <p className="text-sm font-semibold text-gray-900">{asset.tvl}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400 uppercase tracking-wider">Min Deposit</p>
-                        <p className="text-sm font-semibold text-gray-900">{asset.minDeposit}</p>
-                      </div>
-                    </div>
-
-                    {/* Buttons */}
-                    <div className="flex gap-3">
-                      <Link
-                        href={`/assets/${asset.symbol}`}
-                        className="flex-1 text-center py-2.5 rounded-xl text-sm font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
-                      >
-                        Details
-                      </Link>
-                      <Link
-                        href="/pools"
-                        className="flex-1 text-center py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-300"
-                        style={{
-                          background: 'linear-gradient(135deg, #FF5C16, #FF8A50)',
-                        }}
-                      >
-                        Join Pool
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
+          {/* ── Asset cards ── */}
+          <AssetGrid />
         </div>
       </section>
+
 
       {/* ==================== HOW IT WORKS (Change 2) ==================== */}
       <section id="how-it-works" className="py-24 md:py-36 bg-brand-cream">

@@ -201,7 +201,7 @@ export default function AssetDetailPage() {
                 >
                     <h2 className="text-lg font-bold text-gray-900 mb-3">About {ASSET.symbol}</h2>
                     <p className="text-sm text-gray-600 leading-relaxed mb-4">{ASSET.description}</p>
-                    <div className="flex gap-8 text-sm">
+                    <div className="flex flex-wrap gap-4 sm:gap-8 text-sm">
                         <div>
                             <span className="text-gray-400">Issuer: </span>
                             <span className="font-semibold text-gray-900">{ASSET.issuer}</span>

@@ -1,9 +1,11 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
 import ProgressBar from '@/components/ProgressBar';
 import StatusBadge from '@/components/StatusBadge';
 import TxLink from '@/components/TxLink';
+import { Skeleton } from '@/components/ui/skeleton';
 
 /* ------------------------------------------------------------------ */
 /*  Hardcoded data                                                     */
@@ -39,6 +41,13 @@ const totalYield = totalValue - totalDeposited;
 const yieldPct = ((totalYield / totalDeposited) * 100).toFixed(2);
 
 export default function PortfolioPage() {
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setLoading(false), 1500);
+        return () => clearTimeout(timer);
+    }, []);
+
     return (
         <div className="min-h-screen bg-brand-cream">
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
@@ -73,22 +82,32 @@ export default function PortfolioPage() {
                         }}
                     />
                     <div className="relative z-10">
-                        <p className="text-sm text-white/40 uppercase tracking-wider mb-2">Total Portfolio Value</p>
-                        <p
-                            className="text-4xl md:text-6xl font-black mb-2"
-                            style={{
-                                background: 'linear-gradient(135deg, #FF5C16, #FFA680, #D075FF)',
-                                WebkitBackgroundClip: 'text',
-                                WebkitTextFillColor: 'transparent',
-                                backgroundClip: 'text',
-                            }}
-                        >
-                            ${totalValue.toLocaleString('en-US', { minimumFractionDigits: 0 })}
-                        </p>
-                        <p className="text-white/50 text-sm">
-                            Deposited ${totalDeposited.toLocaleString('en-US', { minimumFractionDigits: 0 })} · Yield{' '}
-                            <span className="text-green-400">+${totalYield.toFixed(0)} (+{yieldPct}%)</span>
-                        </p>
+                        {loading ? (
+                            <>
+                                <Skeleton className="h-4 w-36 bg-white/10 mb-3" />
+                                <Skeleton className="h-14 w-48 bg-white/10 mb-3" />
+                                <Skeleton className="h-4 w-64 bg-white/10" />
+                            </>
+                        ) : (
+                            <>
+                                <p className="text-sm text-white/40 uppercase tracking-wider mb-2">Total Portfolio Value</p>
+                                <p
+                                    className="text-4xl md:text-6xl font-black mb-2"
+                                    style={{
+                                        background: 'linear-gradient(135deg, #FF5C16, #FFA680, #D075FF)',
+                                        WebkitBackgroundClip: 'text',
+                                        WebkitTextFillColor: 'transparent',
+                                        backgroundClip: 'text',
+                                    }}
+                                >
+                                    ${totalValue.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+                                </p>
+                                <p className="text-white/50 text-sm">
+                                    Deposited ${totalDeposited.toLocaleString('en-US', { minimumFractionDigits: 0 })} · Yield{' '}
+                                    <span className="text-green-400">+${totalYield.toFixed(0)} (+{yieldPct}%)</span>
+                                </p>
+                            </>
+                        )}
                     </div>
                 </motion.div>
 
@@ -101,56 +120,79 @@ export default function PortfolioPage() {
                 >
                     <h2 className="text-xl font-bold text-gray-900 mb-4">Pool Positions</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {POOLS_POS.map((pos) => (
-                            <div key={pos.pool} className="bg-white rounded-2xl p-6 shadow-md">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div>
-                                        <h3 className="font-bold text-gray-900">{pos.pool}</h3>
-                                        <p className="text-sm text-gray-400">{pos.shares.toLocaleString()} shares</p>
+                        {loading ? (
+                            [1, 2].map((n) => (
+                                <div key={n} className="bg-white rounded-2xl p-6 shadow-md">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div>
+                                            <Skeleton className="h-5 w-32 mb-1" />
+                                            <Skeleton className="h-3 w-20" />
+                                        </div>
+                                        <Skeleton className="h-5 w-16 rounded-full" />
                                     </div>
-                                    <StatusBadge status={pos.status} />
+                                    <div className="grid grid-cols-3 gap-4 mb-4">
+                                        {[1, 2, 3].map((m) => (
+                                            <div key={m}>
+                                                <Skeleton className="h-3 w-14 mb-1" />
+                                                <Skeleton className="h-4 w-16" />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <Skeleton className="h-3 w-full rounded-full" />
                                 </div>
+                            ))
+                        ) : (
+                            POOLS_POS.map((pos) => (
+                                <div key={pos.pool} className="bg-white rounded-2xl p-6 shadow-md">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div>
+                                            <h3 className="font-bold text-gray-900">{pos.pool}</h3>
+                                            <p className="text-sm text-gray-400">{pos.shares.toLocaleString()} shares</p>
+                                        </div>
+                                        <StatusBadge status={pos.status} />
+                                    </div>
 
-                                <div className="grid grid-cols-3 gap-4 mb-4">
-                                    <div>
-                                        <p className="text-xs text-gray-400 uppercase tracking-wider">Deposited</p>
-                                        <p className="text-sm font-semibold text-gray-900">${pos.deposited.toLocaleString()}</p>
+                                    <div className="grid grid-cols-3 gap-4 mb-4">
+                                        <div>
+                                            <p className="text-xs text-gray-400 uppercase tracking-wider">Deposited</p>
+                                            <p className="text-sm font-semibold text-gray-900">${pos.deposited.toLocaleString()}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-400 uppercase tracking-wider">Current</p>
+                                            <p className="text-sm font-semibold text-gray-900">${pos.value.toLocaleString()}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-400 uppercase tracking-wider">Yield</p>
+                                            <p
+                                                className="text-sm font-bold"
+                                                style={{
+                                                    background: 'linear-gradient(135deg, #FF5C16, #D075FF)',
+                                                    WebkitBackgroundClip: 'text',
+                                                    WebkitTextFillColor: 'transparent',
+                                                    backgroundClip: 'text',
+                                                }}
+                                            >
+                                                +${pos.yield}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-xs text-gray-400 uppercase tracking-wider">Current</p>
-                                        <p className="text-sm font-semibold text-gray-900">${pos.value.toLocaleString()}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-gray-400 uppercase tracking-wider">Yield</p>
-                                        <p
-                                            className="text-sm font-bold"
-                                            style={{
-                                                background: 'linear-gradient(135deg, #FF5C16, #D075FF)',
-                                                WebkitBackgroundClip: 'text',
-                                                WebkitTextFillColor: 'transparent',
-                                                backgroundClip: 'text',
-                                            }}
+
+                                    {pos.status === 'filling' && (
+                                        <div className="mb-4">
+                                            <ProgressBar filled={pos.filled} threshold={pos.threshold} showLabel />
+                                        </div>
+                                    )}
+
+                                    {pos.status === 'funded' && (
+                                        <button
+                                            className="w-full py-2.5 rounded-xl text-sm font-semibold border-2 border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
                                         >
-                                            +${pos.yield}
-                                        </p>
-                                    </div>
+                                            Withdraw
+                                        </button>
+                                    )}
                                 </div>
-
-                                {pos.status === 'filling' && (
-                                    <div className="mb-4">
-                                        <ProgressBar filled={pos.filled} threshold={pos.threshold} showLabel />
-                                    </div>
-                                )}
-
-                                {pos.status === 'funded' && (
-                                    <button
-                                        className="w-full py-2.5 rounded-xl text-sm font-semibold border-2 border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
-                                    >
-                                        Withdraw
-                                    </button>
-                                )}
-                            </div>
-                        ))}
+                            ))
+                        )}
                     </div>
                 </motion.div>
 
@@ -162,7 +204,7 @@ export default function PortfolioPage() {
                     className="mb-8"
                 >
                     <h2 className="text-xl font-bold text-gray-900 mb-4">Direct Holdings</h2>
-                    <div className="bg-white rounded-2xl shadow-md overflow-hidden">
+                    <div className="bg-white rounded-2xl shadow-md overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-gray-100">
@@ -173,14 +215,25 @@ export default function PortfolioPage() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {HOLDINGS.map((h) => (
-                                    <tr key={h.asset} className="border-b border-gray-50">
-                                        <td className="px-6 py-4 font-semibold text-gray-900">{h.asset}</td>
-                                        <td className="px-6 py-4 text-right text-gray-700">{h.amount.toLocaleString()}</td>
-                                        <td className="px-6 py-4 text-right text-gray-500">${h.nav.toFixed(4)}</td>
-                                        <td className="px-6 py-4 text-right font-semibold text-gray-900">${h.value.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                                    </tr>
-                                ))}
+                                {loading ? (
+                                    [1, 2].map((n) => (
+                                        <tr key={n} className="border-b border-gray-50">
+                                            <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>
+                                            <td className="px-6 py-4 text-right"><Skeleton className="h-4 w-12 ml-auto" /></td>
+                                            <td className="px-6 py-4 text-right"><Skeleton className="h-4 w-16 ml-auto" /></td>
+                                            <td className="px-6 py-4 text-right"><Skeleton className="h-4 w-20 ml-auto" /></td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    HOLDINGS.map((h) => (
+                                        <tr key={h.asset} className="border-b border-gray-50">
+                                            <td className="px-6 py-4 font-semibold text-gray-900">{h.asset}</td>
+                                            <td className="px-6 py-4 text-right text-gray-700">{h.amount.toLocaleString()}</td>
+                                            <td className="px-6 py-4 text-right text-gray-500">${h.nav.toFixed(4)}</td>
+                                            <td className="px-6 py-4 text-right font-semibold text-gray-900">${h.value.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -198,7 +251,7 @@ export default function PortfolioPage() {
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                             <div>
                                 <h3 className="font-bold text-gray-900 mb-1">{LP.pool}</h3>
-                                <div className="flex gap-6 text-sm">
+                                <div className="flex flex-wrap gap-4 sm:gap-6 text-sm">
                                     <div>
                                         <span className="text-gray-400">LP Tokens: </span>
                                         <span className="font-semibold text-gray-900">{LP.lpTokens}</span>
@@ -247,7 +300,7 @@ export default function PortfolioPage() {
                     transition={{ duration: 0.6, delay: 0.25 }}
                 >
                     <h2 className="text-xl font-bold text-gray-900 mb-4">Transaction History</h2>
-                    <div className="bg-white rounded-2xl shadow-md overflow-hidden">
+                    <div className="bg-white rounded-2xl shadow-md overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-gray-100">

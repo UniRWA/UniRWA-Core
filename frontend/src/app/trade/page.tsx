@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowDownUp, Info } from 'lucide-react';
 import { useState } from 'react';
+import StatusBadge from '@/components/StatusBadge';
 
 /* ------------------------------------------------------------------ */
 /*  Hardcoded data                                                     */
@@ -67,7 +68,7 @@ export default function TradePage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, delay: 0.1 }}
-                    className="max-w-lg mx-auto bg-white rounded-3xl shadow-lg p-6 md:p-8 mb-12"
+                    className="max-w-lg mx-auto bg-white rounded-3xl shadow-lg p-4 sm:p-6 md:p-8 mb-12"
                 >
                     {/* You Pay */}
                     <div className="mb-2">
@@ -86,7 +87,7 @@ export default function TradePage() {
                                 type="text"
                                 value={amount}
                                 onChange={(e) => setAmount(e.target.value)}
-                                className="flex-1 text-right text-2xl font-bold text-gray-900 bg-transparent outline-none"
+                                className="flex-1 text-right text-xl sm:text-2xl font-bold text-gray-900 bg-transparent outline-none min-w-0"
                                 placeholder="0"
                             />
                         </div>
@@ -121,7 +122,7 @@ export default function TradePage() {
                                     <option key={a.symbol} value={i}>{a.symbol}</option>
                                 ))}
                             </select>
-                            <div className="flex-1 text-right text-2xl font-bold text-gray-900">
+                            <div className="flex-1 text-right text-xl sm:text-2xl font-bold text-gray-900 min-w-0 truncate">
                                 {output > 0 ? output.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '0'}
                             </div>
                         </div>
@@ -177,7 +178,7 @@ export default function TradePage() {
                     className="max-w-3xl mx-auto"
                 >
                     <h2 className="text-lg font-bold text-gray-900 mb-4">Recent Trades</h2>
-                    <div className="bg-white rounded-2xl shadow-md overflow-hidden">
+                    <div className="bg-white rounded-2xl shadow-md overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-gray-100">
@@ -193,14 +194,7 @@ export default function TradePage() {
                                     <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                                         <td className="px-6 py-4 font-semibold text-gray-900">{trade.asset}</td>
                                         <td className="px-6 py-4">
-                                            <span
-                                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${trade.dir === 'Buy'
-                                                    ? 'bg-green-50 text-green-700'
-                                                    : 'bg-red-50 text-red-700'
-                                                    }`}
-                                            >
-                                                {trade.dir}
-                                            </span>
+                                            <StatusBadge status={trade.dir === 'Buy' ? 'buy' : 'sell'} />
                                         </td>
                                         <td className="px-6 py-4 text-right font-medium text-gray-900">{trade.amount}</td>
                                         <td className="px-6 py-4 text-right text-gray-500">{trade.rate}</td>
