@@ -1,0 +1,17 @@
+{
+  "name": "unirwa",
+  "version": "1.0.0",
+  "private": true,
+  "description": "UniRWA — Unified marketplace for tokenized real-world assets on Avalanche",
+  "workspaces": [
+    "contracts",
+    "backend",
+    "frontend",
+    "indexer"
+  ],
+  "scripts": {
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "db:migrate": "node backend/src/db/migrate.js"
+  }
+}

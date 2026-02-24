@@ -36,6 +36,13 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# backend
+backend/node_modules
+backend/.env
+
+# env files
+.env
+
 #extra files
 PROJECT_BRIEF.md
 web3-design-system.md

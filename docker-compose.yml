@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: unirwa-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: unirwa
+      POSTGRES_USER: unirwa
+      POSTGRES_PASSWORD: unirwa_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - unirwa-network
+
+  redis:
+    image: redis:7
+    container_name: unirwa-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - unirwa-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+
+networks:
+  unirwa-network:
+    driver: bridge
