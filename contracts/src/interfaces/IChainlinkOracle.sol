@@ -26,6 +26,17 @@ interface IChainlinkOracle {
             uint256 updatedAt,
             uint80 answeredInRound
         );
+
+    function getLatestRoundData(string memory symbol)
+        external
+        view
+        returns (
+           uint80 roundId,
+           int256 answer,
+           uint256 startedAt,
+           uint256 updatedAt,
+           uint80 answeredInRound
+        );
     
     /**
      * @notice Get the number of decimals in the price feed
