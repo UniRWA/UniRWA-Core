@@ -12,23 +12,11 @@ import {
     ResponsiveContainer,
     CartesianGrid,
 } from 'recharts';
+import { useParams } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import { fetchAsset } from '@/lib/api';
+import { Skeleton } from '@/components/ui/skeleton';
 import ProgressBar from '@/components/ProgressBar';
-
-/* ------------------------------------------------------------------ */
-/*  Hardcoded data                                                     */
-/* ------------------------------------------------------------------ */
-const ASSET = {
-    symbol: 'BUIDL',
-    name: 'BlackRock USD Institutional Digital Liquidity Fund',
-    issuer: 'Securitize / BlackRock',
-    nav: 1.0045,
-    apy: 4.5,
-    tvl: '$217M',
-    type: 'Treasury Money Market',
-    description:
-        'BUIDL is a tokenized money market fund investing in US Treasury bills, dollar cash, and repurchase agreements. Managed by BlackRock on Avalanche C-Chain.',
-    riskRating: 'Very Low',
-};
 
 const PRICE_HISTORY = [
     { date: 'Feb 16', nav: 1.0039 },
@@ -42,11 +30,69 @@ const PRICE_HISTORY = [
 
 const CHART_TABS = ['7D', '30D', '90D'];
 
-export default function AssetDetailPage() {
+function formatTvl(tvl: string | number): string {
+    const num = Number(tvl);
+    if (num >= 1_000_000_000) return `$${(num / 1_000_000_000).toFixed(1)}B`;
+    if (num >= 1_000_000) return `$${(num / 1_000_000).toFixed(0)}M`;
+    if (num >= 1_000) return `$${(num / 1_000).toFixed(0)}K`;
+    return `$${num}`;
+}
+
+function AssetDetailSkeleton() {
     return (
         <div className="min-h-screen bg-brand-cream">
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
-                {/* Back link */}
+                <Skeleton className="h-4 w-20 mb-8" />
+                <Skeleton className="h-48 w-full rounded-2xl mb-8" />
+                <Skeleton className="h-80 w-full rounded-2xl mb-8" />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    {[1, 2, 3, 4].map((n) => (
+                        <Skeleton key={n} className="h-24 rounded-2xl" />
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export default function AssetDetailPage() {
+    const params = useParams();
+    const symbol = (params.symbol as string)?.toUpperCase();
+
+    const { data: asset, isLoading, error } = useQuery({
+        queryKey: ['asset', symbol],
+        queryFn: () => fetchAsset(symbol),
+        staleTime: 60_000,
+        enabled: !!symbol,
+    });
+
+    if (isLoading) return <AssetDetailSkeleton />;
+
+    if (error || !asset) {
+        return (
+            <div className="min-h-screen bg-brand-cream flex items-center justify-center">
+                <div className="text-center">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Asset Not Found</h2>
+                    <p className="text-gray-500 mb-4">Could not load data for &quot;{symbol}&quot;</p>
+                    <Link href="/" className="text-brand-orange hover:underline">← Back to Markets</Link>
+                </div>
+            </div>
+        );
+    }
+
+    const nav = Number(asset.nav);
+    const apy = Number(asset.yield_apy);
+    const riskRating = 'Very Low';
+
+    const descriptions: Record<string, string> = {
+        BUIDL: 'BUIDL is a tokenized money market fund investing in US Treasury bills, dollar cash, and repurchase agreements. Managed by BlackRock on Avalanche C-Chain.',
+        BENJI: 'BENJI is the Franklin OnChain US Government Money Fund, providing exposure to US government securities. Managed by Franklin Templeton.',
+        OUSG: 'OUSG is a short-term US government bond fund by Ondo Finance, offering stable yield from Treasury-backed instruments.',
+    };
+
+    return (
+        <div className="min-h-screen bg-brand-cream">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
                 <motion.div
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -61,7 +107,6 @@ export default function AssetDetailPage() {
                     </Link>
                 </motion.div>
 
-                {/* Dark header */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -80,12 +125,12 @@ export default function AssetDetailPage() {
                     />
                     <div className="relative z-10">
                         <div className="flex flex-col md:flex-row md:items-center gap-4 mb-4">
-                            <h1 className="text-3xl md:text-4xl font-black text-white">{ASSET.symbol}</h1>
+                            <h1 className="text-3xl md:text-4xl font-black text-white">{asset.symbol}</h1>
                             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-900/30 text-green-400 border border-green-800/30">
-                                {ASSET.riskRating} Risk
+                                {riskRating} Risk
                             </span>
                         </div>
-                        <p className="text-white/50 text-sm mb-6">{ASSET.name}</p>
+                        <p className="text-white/50 text-sm mb-6">{asset.name}</p>
                         <p
                             className="text-4xl md:text-5xl font-black"
                             style={{
@@ -95,12 +140,11 @@ export default function AssetDetailPage() {
                                 backgroundClip: 'text',
                             }}
                         >
-                            {ASSET.apy}% APY
+                            {apy.toFixed(2)}% APY
                         </p>
                     </div>
                 </motion.div>
 
-                {/* NAV Chart Card */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -158,7 +202,6 @@ export default function AssetDetailPage() {
                     </div>
                 </motion.div>
 
-                {/* 4 Metrics Cards */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -166,10 +209,10 @@ export default function AssetDetailPage() {
                     className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"
                 >
                     {[
-                        { label: 'Total Value Locked', value: ASSET.tvl },
-                        { label: 'Min Investment', value: '$50,000' },
-                        { label: 'Current NAV', value: `$${ASSET.nav.toFixed(4)}` },
-                        { label: 'APY', value: `${ASSET.apy}%`, gradient: true },
+                        { label: 'Total Value Locked', value: formatTvl(asset.tvl) },
+                        { label: 'Min Investment', value: `$${Number(asset.min_investment).toLocaleString()}` },
+                        { label: 'Current NAV', value: `$${nav.toFixed(4)}` },
+                        { label: 'APY', value: `${apy.toFixed(2)}%`, gradient: true },
                     ].map((metric) => (
                         <div key={metric.label} className="bg-white rounded-2xl p-5 shadow-md">
                             <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">{metric.label}</p>
@@ -192,41 +235,40 @@ export default function AssetDetailPage() {
                     ))}
                 </motion.div>
 
-                {/* About section */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, delay: 0.15 }}
                     className="bg-white rounded-2xl p-6 md:p-8 shadow-md mb-8"
                 >
-                    <h2 className="text-lg font-bold text-gray-900 mb-3">About {ASSET.symbol}</h2>
-                    <p className="text-sm text-gray-600 leading-relaxed mb-4">{ASSET.description}</p>
+                    <h2 className="text-lg font-bold text-gray-900 mb-3">About {asset.symbol}</h2>
+                    <p className="text-sm text-gray-600 leading-relaxed mb-4">
+                        {descriptions[asset.symbol] || `${asset.name} is a tokenized real-world asset available on Avalanche.`}
+                    </p>
                     <div className="flex flex-wrap gap-4 sm:gap-8 text-sm">
                         <div>
                             <span className="text-gray-400">Issuer: </span>
-                            <span className="font-semibold text-gray-900">{ASSET.issuer}</span>
+                            <span className="font-semibold text-gray-900">{asset.issuer}</span>
                         </div>
                         <div>
                             <span className="text-gray-400">Type: </span>
-                            <span className="font-semibold text-gray-900">{ASSET.type}</span>
+                            <span className="font-semibold text-gray-900">{asset.asset_type}</span>
                         </div>
                     </div>
                 </motion.div>
 
-                {/* Access Options — two cards side by side */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, delay: 0.2 }}
                     className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8"
                 >
-                    {/* Join a Pool */}
                     <div className="bg-white rounded-2xl p-6 shadow-md">
                         <h3 className="text-lg font-bold text-gray-900 mb-2">Join a Pool</h3>
                         <p className="text-sm text-gray-500 mb-4">Pool together with others to meet the minimum investment.</p>
                         <div className="bg-gray-50 rounded-xl p-4 mb-4">
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm font-semibold text-gray-900">BUIDL Pool #1</span>
+                                <span className="text-sm font-semibold text-gray-900">{asset.symbol} Pool #1</span>
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
                                     filling
                                 </span>
@@ -234,25 +276,24 @@ export default function AssetDetailPage() {
                             <ProgressBar filled={5000} threshold={50000} showLabel />
                         </div>
                         <Link
-                            href="/pools/0xpool1"
+                            href="/pools"
                             className="block text-center py-2.5 rounded-xl text-sm font-semibold text-white w-full transition-all duration-300"
                             style={{
                                 background: 'linear-gradient(135deg, #FF5C16, #FF8A50)',
                             }}
                         >
-                            View Pool →
+                            View Pools →
                         </Link>
                     </div>
 
-                    {/* Primary Market */}
                     <div className="bg-white rounded-2xl p-6 shadow-md">
                         <h3 className="text-lg font-bold text-gray-900 mb-2">Primary Market</h3>
                         <p className="text-sm text-gray-500 mb-4">Purchase directly from the issuer (higher minimum).</p>
                         <div className="bg-gray-50 rounded-xl p-4 mb-4">
                             <p className="text-sm text-gray-700">
-                                <span className="font-semibold">Minimum:</span> $50,000
+                                <span className="font-semibold">Minimum:</span> ${Number(asset.min_investment).toLocaleString()}
                             </p>
-                            <p className="text-sm text-gray-400 mt-1">Via {ASSET.issuer}</p>
+                            <p className="text-sm text-gray-400 mt-1">Via {asset.issuer}</p>
                         </div>
                         <a
                             href="https://securitize.io"
@@ -265,7 +306,6 @@ export default function AssetDetailPage() {
                     </div>
                 </motion.div>
 
-                {/* Secondary Market Card */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -276,11 +316,11 @@ export default function AssetDetailPage() {
                     <div className="flex flex-col sm:flex-row gap-6">
                         <div className="flex-1">
                             <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Best Bid</p>
-                            <p className="text-lg font-bold text-green-600">$1.0038</p>
+                            <p className="text-lg font-bold text-green-600">${(nav - 0.0007).toFixed(4)}</p>
                         </div>
                         <div className="flex-1">
                             <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Best Ask</p>
-                            <p className="text-lg font-bold text-red-500">$1.0042</p>
+                            <p className="text-lg font-bold text-red-500">${(nav - 0.0003).toFixed(4)}</p>
                         </div>
                         <div className="flex items-end gap-3">
                             <Link
