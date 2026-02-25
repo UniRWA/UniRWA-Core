@@ -6,6 +6,7 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 
 const assetRoutes = require('./routes/assets');
+const poolRoutes = require('./routes/pools');
 const { startCron } = require('./services/aggregatorService');
 
 const app = express();
@@ -30,6 +31,7 @@ app.use('/api', apiLimiter);
 
 // routes
 app.use('/', assetRoutes);
+app.use('/', poolRoutes);
 
 // start aggregator cron
 startCron();
@@ -38,5 +40,6 @@ startCron();
 app.listen(PORT, () => {
     console.log(`\n🚀 UniRWA Backend running at http://localhost:${PORT}`);
     console.log(`   Health: http://localhost:${PORT}/health`);
-    console.log(`   Assets: http://localhost:${PORT}/api/assets\n`);
+    console.log(`   Assets: http://localhost:${PORT}/api/assets`);
+    console.log(`   Pools:  http://localhost:${PORT}/api/pools\n`);
 });
