@@ -9,6 +9,8 @@ const assetRoutes = require('./routes/assets');
 const poolRoutes = require('./routes/pools');
 const kycRoutes = require('./routes/kyc');
 const { startCron } = require('./services/aggregatorService');
+const keeperBot = require('./services/keeperBot');
+const yieldSimulator = require('./services/yieldSimulator');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -35,8 +37,10 @@ app.use('/', assetRoutes);
 app.use('/', poolRoutes);
 app.use('/', kycRoutes);
 
-// start aggregator cron
+// start background services
 startCron();
+keeperBot.start();
+yieldSimulator.start();
 
 // start server
 app.listen(PORT, () => {
