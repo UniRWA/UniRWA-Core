@@ -20,6 +20,27 @@ const OUSG_ABI = [
     },
 ];
 
+const MOCK_ISSUER_ABI = [
+    {
+        name: 'rebaseToken',
+        type: 'function',
+        stateMutability: 'nonpayable',
+        inputs: [{ name: 'token', type: 'address' }],
+        outputs: [],
+    },
+    {
+        name: 'distributeYieldOnToken',
+        type: 'function',
+        stateMutability: 'nonpayable',
+        inputs: [
+            { name: 'token', type: 'address' },
+            { name: 'yieldAmount', type: 'uint256' },
+        ],
+        outputs: [],
+    },
+];
+const issuerAddress = process.env.MOCK_ISSUER_ADDRESS;
+
 const BUIDL_ABI = [
     {
         name: 'distributeYield',
@@ -90,9 +111,10 @@ async function simulateYield() {
 
             if (now >= lastRebase + oneDay) {
                 const txHash = await walletClient.writeContract({
-                    address: ousgAddress,
-                    abi: OUSG_ABI,
-                    functionName: 'rebase',
+                    address: issuerAddress,
+                    abi: MOCK_ISSUER_ABI,
+                    functionName: 'rebaseToken',
+                    args: [ousgAddress],
                 });
 
                 const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
@@ -127,10 +149,10 @@ async function simulateYield() {
                 const monthlyYield = (totalSupply * 450n) / 120000n;
 
                 const txHash = await walletClient.writeContract({
-                    address: buidlAddress,
-                    abi: BUIDL_ABI,
-                    functionName: 'distributeYield',
-                    args: [monthlyYield],
+                    address: issuerAddress,
+                    abi: MOCK_ISSUER_ABI,
+                    functionName: 'distributeYieldOnToken',
+                    args: [buidlAddress, monthlyYield],
                 });
 
                 const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
