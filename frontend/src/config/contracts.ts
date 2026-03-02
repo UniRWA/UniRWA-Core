@@ -11,6 +11,8 @@ export const ADDRESSES = {
     HYBRID_AMM: process.env.NEXT_PUBLIC_HYBRID_AMM_ADDRESS as `0x${string}`,
     ROUTER: process.env.NEXT_PUBLIC_ROUTER_ADDRESS as `0x${string}`,
     ORACLE: process.env.NEXT_PUBLIC_MOCK_ORACLE_ADDRESS as `0x${string}`,
+    ORDERBOOK: process.env.NEXT_PUBLIC_ORDERBOOK_ADDRESS as `0x${string}`,
+    LIQUIDITY_MINING: process.env.NEXT_PUBLIC_LIQUIDITY_MINING_ADDRESS as `0x${string}`,
 } as const;
 
 
@@ -216,3 +218,157 @@ export const HYBRID_AMM_ABI = [
 export const USDC_DECIMALS = 6;
 export const RWA_DECIMALS = 18;
 
+// ─── Orderbook ABI ────────────────────────────────────────────────
+export const ORDERBOOK_ABI = [
+    {
+        name: 'placeBuyOrder',
+        type: 'function',
+        stateMutability: 'nonpayable',
+        inputs: [
+            { name: 'rwaToken', type: 'address' },
+            { name: 'limitPrice', type: 'uint256' },
+            { name: 'usdcAmount', type: 'uint256' },
+        ],
+        outputs: [{ name: 'orderId', type: 'uint256' }],
+    },
+    {
+        name: 'placeSellOrder',
+        type: 'function',
+        stateMutability: 'nonpayable',
+        inputs: [
+            { name: 'rwaToken', type: 'address' },
+            { name: 'limitPrice', type: 'uint256' },
+            { name: 'rwaAmount', type: 'uint256' },
+        ],
+        outputs: [{ name: 'orderId', type: 'uint256' }],
+    },
+    {
+        name: 'cancelOrder',
+        type: 'function',
+        stateMutability: 'nonpayable',
+        inputs: [{ name: 'orderId', type: 'uint256' }],
+        outputs: [],
+    },
+    {
+        name: 'getActiveOrders',
+        type: 'function',
+        stateMutability: 'view',
+        inputs: [{ name: 'rwaToken', type: 'address' }],
+        outputs: [{
+            name: '',
+            type: 'tuple[]',
+            components: [
+                { name: 'id', type: 'uint256' },
+                { name: 'trader', type: 'address' },
+                { name: 'rwaToken', type: 'address' },
+                { name: 'isBuy', type: 'bool' },
+                { name: 'limitPrice', type: 'uint256' },
+                { name: 'amount', type: 'uint256' },
+                { name: 'filled', type: 'uint256' },
+                { name: 'timestamp', type: 'uint256' },
+                { name: 'active', type: 'bool' },
+            ],
+        }],
+    },
+    {
+        name: 'getOrderbookInfo',
+        type: 'function',
+        stateMutability: 'view',
+        inputs: [],
+        outputs: [
+            { name: 'totalOrders', type: 'uint256' },
+            { name: 'activeOrders', type: 'uint256' },
+            { name: 'keeperAddress', type: 'address' },
+        ],
+    },
+] as const;
+
+// ─── LiquidityMining ABI ──────────────────────────────────────────
+export const LIQUIDITY_MINING_ABI = [
+    {
+        name: 'stake',
+        type: 'function',
+        stateMutability: 'nonpayable',
+        inputs: [
+            { name: 'lpPool', type: 'address' },
+            { name: 'amount', type: 'uint256' },
+        ],
+        outputs: [],
+    },
+    {
+        name: 'unstake',
+        type: 'function',
+        stateMutability: 'nonpayable',
+        inputs: [
+            { name: 'lpPool', type: 'address' },
+            { name: 'amount', type: 'uint256' },
+        ],
+        outputs: [],
+    },
+    {
+        name: 'claimRewards',
+        type: 'function',
+        stateMutability: 'nonpayable',
+        inputs: [],
+        outputs: [],
+    },
+    {
+        name: 'pendingRewards',
+        type: 'function',
+        stateMutability: 'view',
+        inputs: [{ name: 'user', type: 'address' }],
+        outputs: [{ name: 'pending', type: 'uint256' }],
+    },
+    {
+        name: 'stakedLP',
+        type: 'function',
+        stateMutability: 'view',
+        inputs: [
+            { name: 'user', type: 'address' },
+            { name: 'lpPool', type: 'address' },
+        ],
+        outputs: [{ name: '', type: 'uint256' }],
+    },
+    {
+        name: 'getUserInfo',
+        type: 'function',
+        stateMutability: 'view',
+        inputs: [
+            { name: 'user', type: 'address' },
+            { name: 'lpPool', type: 'address' },
+        ],
+        outputs: [
+            { name: 'staked', type: 'uint256' },
+            { name: 'totalUserStake', type: 'uint256' },
+            { name: 'pending', type: 'uint256' },
+            { name: 'lastTime', type: 'uint256' },
+        ],
+    },
+    {
+        name: 'getStakingInfo',
+        type: 'function',
+        stateMutability: 'view',
+        inputs: [],
+        outputs: [
+            { name: 'rate', type: 'uint256' },
+            { name: 'totalStakedAll', type: 'uint256' },
+            { name: 'rewardsBalance', type: 'uint256' },
+            { name: 'rewardsPaid', type: 'uint256' },
+            { name: 'poolCount', type: 'uint256' },
+        ],
+    },
+] as const;
+
+// ─── HybridAMM LP balances ABI ────────────────────────────────────
+export const AMM_LP_ABI = [
+    {
+        name: 'lpBalances',
+        type: 'function',
+        stateMutability: 'view',
+        inputs: [
+            { name: 'user', type: 'address' },
+            { name: 'token', type: 'address' },
+        ],
+        outputs: [{ name: '', type: 'uint256' }],
+    },
+] as const;
