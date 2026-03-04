@@ -3,6 +3,7 @@ import { useWriteContract, useWaitForTransactionReceipt, useAccount } from 'wagm
 import { parseUnits } from 'viem';
 import { toast } from 'sonner';
 import { POOL_ABI, ERC20_ABI, ADDRESSES, USDC_DECIMALS } from '@/config/contracts';
+import { parseRevertReason } from '@/lib/utils';
 
 export type DepositStep = 'idle' | 'approving' | 'waitingApproval' | 'depositing' | 'waitingDeposit' | 'success' | 'error';
 
@@ -102,24 +103,14 @@ export function usePoolDeposit({ poolAddress, onSuccess }: UsePoolDepositOptions
     useEffect(() => {
         if (approveError && (step === 'approving' || step === 'waitingApproval')) {
             setStep('error');
-            const msg = approveError.message?.includes('User rejected')
-                ? 'Transaction rejected by user'
-                : approveError.message?.slice(0, 120) || 'Approval failed';
-            toast.error('Approval failed', { description: msg });
+            toast.error('Approval failed', { description: parseRevertReason(approveError) });
         }
     }, [approveError, step]);
 
     useEffect(() => {
         if (depositError && (step === 'depositing' || step === 'waitingDeposit')) {
             setStep('error');
-            const msg = depositError.message?.includes('User rejected')
-                ? 'Transaction rejected by user'
-                : depositError.message?.includes('KYC required')
-                    ? 'KYC verification required — complete verification first'
-                    : depositError.message?.includes('Below minimum')
-                        ? 'Amount is below the minimum deposit'
-                        : depositError.message?.slice(0, 120) || 'Deposit failed';
-            toast.error('Deposit failed', { description: msg });
+            toast.error('Deposit failed', { description: parseRevertReason(depositError) });
         }
     }, [depositError, step]);
 

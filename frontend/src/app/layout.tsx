@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Providers from "@/components/Providers";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import PageTransition from "@/components/PageTransition";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -23,11 +24,13 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.className} bg-brand-cream`}>
         <Providers>
-          <Navbar />
-          <main>
-            <PageTransition>{children}</PageTransition>
-          </main>
-          <Toaster />
+          <ErrorBoundary>
+            <Navbar />
+            <main>
+              <PageTransition>{children}</PageTransition>
+            </main>
+            <Toaster />
+          </ErrorBoundary>
         </Providers>
       </body>
     </html>

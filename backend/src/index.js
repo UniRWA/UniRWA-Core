@@ -22,15 +22,26 @@ const PORT = process.env.PORT || 3001;
 
 // middleware
 const allowedOrigins = [
-  'http://localhost:3000',
+  "http://localhost:3000",
   process.env.FRONTEND_URL,
-  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
-  process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : null,
+  process.env.RAILWAY_PUBLIC_DOMAIN
+    ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+    : null,
 ].filter(Boolean);
 
 app.use(
   cors({
-    origin: allowedOrigins.length > 0 ? allowedOrigins : '*',
+    origin: (origin, callback) => {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        /\.vercel\.app$/.test(origin)
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   }),
 );
@@ -67,7 +78,11 @@ app.listen(PORT, () => {
   console.log(`   Assets: http://localhost:${PORT}/api/assets`);
   console.log(`   Pools:  http://localhost:${PORT}/api/pools`);
   console.log(`   Orders: http://localhost:${PORT}/api/orders?token=BUIDL`);
-  console.log(`   Portfolio: http://localhost:${PORT}/api/portfolio?wallet=0x...`);
-  console.log(`   Quote:  http://localhost:${PORT}/api/market/quote?token=BUIDL&amount=1000`);
+  console.log(
+    `   Portfolio: http://localhost:${PORT}/api/portfolio?wallet=0x...`,
+  );
+  console.log(
+    `   Quote:  http://localhost:${PORT}/api/market/quote?token=BUIDL&amount=1000`,
+  );
   console.log(`   KYC:    http://localhost:${PORT}/api/kyc/status\n`);
 });

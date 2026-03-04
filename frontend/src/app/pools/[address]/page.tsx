@@ -13,6 +13,7 @@ import StatusBadge from '@/components/StatusBadge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { fetchPool } from '@/lib/api';
 import { usePoolChainData } from '@/hooks/usePoolChainData';
+import { parseRevertReason } from '@/lib/utils';
 import { usePoolDeposit } from '@/hooks/usePoolDeposit';
 import { ERC20_ABI, ADDRESSES, USDC_DECIMALS } from '@/config/contracts';
 
@@ -103,15 +104,9 @@ export default function PoolDetailPage() {
             },
             {
                 onError: (err) => {
-                    if (err.message.includes('24h') || err.message.includes('cooldown')) {
-                        toast.error('Faucet on cooldown', {
-                            description: 'You can only claim once every 24 hours.',
-                        });
-                    } else {
-                        toast.error('Faucet failed', {
-                            description: err.message.slice(0, 120),
-                        });
-                    }
+                    toast.error('Faucet failed', {
+                        description: parseRevertReason(err),
+                    });
                 },
             }
         );
