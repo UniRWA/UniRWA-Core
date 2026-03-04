@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, AlertTriangle } from 'lucide-react';
 import { useAccount, useConnect, useDisconnect, useSwitchChain } from 'wagmi';
 import { avalancheFuji } from 'wagmi/chains';
+import { useAvvyName } from '@/hooks/useAvvyName';
 
 const NAV_LINKS = [
     { href: '/', label: 'Markets' },
@@ -28,6 +29,10 @@ export default function Navbar() {
     const { switchChain } = useSwitchChain();
 
     const isWrongNetwork = isConnected && chain?.id !== avalancheFuji.id;
+
+    // Avvy Domains resolution — resolve .avax name for connected wallet
+    const { data: avvyName } = useAvvyName(address as `0x${string}` | undefined);
+    const displayName = avvyName || (address ? truncateAddress(address) : '');
 
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 80);
@@ -97,7 +102,7 @@ export default function Navbar() {
                                         color: scrolled ? '#0F0F1A' : '#fff',
                                     }}
                                 >
-                                    {truncateAddress(address!)}
+                                    {displayName}
                                 </button>
                             ) : (
                                 <button
@@ -153,7 +158,7 @@ export default function Navbar() {
                                         onClick={() => disconnect()}
                                         className="w-full mt-2 px-6 py-2.5 rounded-full text-sm font-semibold bg-gray-100 text-gray-700"
                                     >
-                                        {truncateAddress(address!)} — Disconnect
+                                        {displayName} — Disconnect
                                     </button>
                                 ) : (
                                     <button

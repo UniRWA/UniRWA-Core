@@ -2,11 +2,13 @@
 
 import { motion } from 'framer-motion';
 import { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { useAccount, useReadContracts, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, CheckCircle2, ExternalLink } from 'lucide-react';
 import ProgressBar from '@/components/ProgressBar';
 import StatusBadge from '@/components/StatusBadge';
+import TxLink from '@/components/TxLink';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { API_BASE } from '@/config/api';
@@ -67,6 +69,12 @@ interface HistoryResponse {
     wallet: string;
     events: HistoryEvent[];
     pagination: { total: number; limit: number; offset: number; hasMore: boolean };
+}
+
+interface KYCStatus {
+    status: string;
+    nftTokenId: string | null;
+    approvedAt: string | null;
 }
 
 const TYPE_BADGE_STYLES: Record<string, string> = {
@@ -147,6 +155,20 @@ export default function PortfolioPage() {
         enabled: !!address,
         refetchInterval: 30000,
     });
+
+    // ─── Fetch KYC status from backend API ───────────────────────────
+    const { data: kycData } = useQuery<KYCStatus>({
+        queryKey: ['kyc-status', address],
+        queryFn: async () => {
+            const res = await fetch(`${API_BASE}/kyc/status?wallet=${address}`);
+            if (!res.ok) throw new Error('Failed to fetch KYC status');
+            return res.json();
+        },
+        enabled: !!address,
+        staleTime: 60000,
+    });
+
+    const isKYCApproved = kycData?.status === 'approved';
 
     // Computed
     const pools = portfolio?.pools || [];
@@ -312,9 +334,20 @@ export default function PortfolioPage() {
                     className="flex items-center gap-3 mb-8"
                 >
                     <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-gray-900">Portfolio</h1>
-                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-700">
-                        ✅ KYC Verified
-                    </span>
+                    {isConnected && (
+                        isKYCApproved ? (
+                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-700">
+                                ✅ KYC Verified
+                            </span>
+                        ) : (
+                            <Link
+                                href="/kyc"
+                                className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors"
+                            >
+                                ⚠️ Verify Now →
+                            </Link>
+                        )
+                    )}
                 </motion.div>
 
                 {/* Total Value Hero Card */}
@@ -699,10 +732,8 @@ export default function PortfolioPage() {
                                             </td>
                                             <td className="px-6 py-4 text-right text-gray-400">{formatDate(h.timestamp)}</td>
                                             <td className="px-6 py-4 text-right">
-                                                {h.txLink ? (
-                                                    <a href={h.txLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 font-mono">
-                                                        {h.txHash?.slice(0, 8)}… <ExternalLink size={10} />
-                                                    </a>
+                                                {h.txHash ? (
+                                                    <TxLink txHash={h.txHash} label={`${h.txHash.slice(0, 8)}…`} />
                                                 ) : (
                                                     <span className="text-xs text-gray-300">—</span>
                                                 )}
