@@ -1,9 +1,9 @@
-const { createPublicClient, http } = require('viem');
+const { createPublicClient, createWalletClient, http } = require('viem');
+const { privateKeyToAccount } = require('viem/accounts');
 const { avalancheFuji } = require('viem/chains');
 const cron = require('node-cron');
 const pool = require('../db/pool');
 
-// MockOracle ABI — only the functions we need
 const ORACLE_ABI = [
     {
         name: 'getNAV',
@@ -19,19 +19,104 @@ const ORACLE_ABI = [
         inputs: [{ name: 'symbol', type: 'string' }],
         outputs: [{ name: '', type: 'uint256' }],
     },
+    {
+        name: 'setPrice',
+        type: 'function',
+        stateMutability: 'nonpayable',
+        inputs: [
+            { name: 'symbol', type: 'string' },
+            { name: 'nav', type: 'int256' },
+            { name: 'apy', type: 'uint256' },
+        ],
+        outputs: [],
+    },
+    {
+        name: 'prices',
+        type: 'function',
+        stateMutability: 'view',
+        inputs: [{ name: 'symbol', type: 'string' }],
+        outputs: [
+            { name: 'nav', type: 'int256' },
+            { name: 'updatedAt', type: 'uint256' },
+            { name: 'apy', type: 'uint256' },
+        ],
+    },
 ];
 
-const SYMBOLS = ['BUIDL', 'BENJI', 'OUSG'];
+const DEFAULT_PRICES = {
+    BUIDL: { nav: 100450000n, apy: 450n },
+    BENJI: { nav: 100810000n, apy: 485n },
+    OUSG: { nav: 100230000n, apy: 480n },
+};
 
-// viem public client for Fuji
-const client = createPublicClient({
+const SYMBOLS = ['BUIDL', 'BENJI', 'OUSG'];
+const STALENESS_THRESHOLD = 2 * 60 * 60;
+
+const rpcUrl = process.env.FUJI_RPC || 'https://api.avax-test.network/ext/bc/C/rpc';
+
+const publicClient = createPublicClient({
     chain: avalancheFuji,
-    transport: http(process.env.FUJI_RPC || 'https://api.avax-test.network/ext/bc/C/rpc'),
+    transport: http(rpcUrl),
 });
 
-/**
- * Fetch NAV + APY from MockOracle via multicall, update assets table
- */
+let walletClient = null;
+
+function initWalletClient() {
+    const pk = process.env.BACKEND_HOT_WALLET_PRIVATE_KEY;
+    if (!pk) {
+        console.warn('[Aggregator] No BACKEND_HOT_WALLET_PRIVATE_KEY — cannot refresh oracle prices');
+        return false;
+    }
+    const account = privateKeyToAccount(pk);
+    walletClient = createWalletClient({
+        account,
+        chain: avalancheFuji,
+        transport: http(rpcUrl),
+    });
+    return true;
+}
+
+async function refreshOraclePrices() {
+    const oracleAddress = process.env.MOCK_ORACLE_ADDRESS;
+    if (!oracleAddress || !walletClient) return;
+
+    try {
+        for (const symbol of SYMBOLS) {
+            try {
+                const priceData = await publicClient.readContract({
+                    address: oracleAddress,
+                    abi: ORACLE_ABI,
+                    functionName: 'prices',
+                    args: [symbol],
+                });
+
+                const [nav, updatedAt, apy] = priceData;
+                const now = BigInt(Math.floor(Date.now() / 1000));
+                const age = Number(now - updatedAt);
+
+                if (updatedAt === 0n || age > STALENESS_THRESHOLD - 1800) {
+                    const navToSet = updatedAt === 0n ? DEFAULT_PRICES[symbol].nav : nav;
+                    const apyToSet = updatedAt === 0n ? DEFAULT_PRICES[symbol].apy : apy;
+
+                    const txHash = await walletClient.writeContract({
+                        address: oracleAddress,
+                        abi: ORACLE_ABI,
+                        functionName: 'setPrice',
+                        args: [symbol, navToSet, apyToSet],
+                    });
+
+                    await publicClient.waitForTransactionReceipt({ hash: txHash });
+                    console.log(`[Aggregator] 🔄 Refreshed oracle price for ${symbol} (was ${age}s old)`);
+                }
+            } catch (err) {
+                console.warn(`[Aggregator] Could not refresh ${symbol} price:`, err.message);
+            }
+        }
+    } catch (err) {
+        console.error('[Aggregator] Oracle refresh error:', err.message);
+    }
+}
+
 async function fetchAndStoreAssetData() {
     const oracleAddress = process.env.MOCK_ORACLE_ADDRESS;
 
@@ -40,10 +125,11 @@ async function fetchAndStoreAssetData() {
         return;
     }
 
+    await refreshOraclePrices();
+
     console.log('[Aggregator] Fetching NAV + APY from MockOracle...');
 
     try {
-        // build multicall contracts — 6 calls total (getNAV + getAPY for each symbol)
         const calls = SYMBOLS.flatMap((symbol) => [
             {
                 address: oracleAddress,
@@ -59,9 +145,8 @@ async function fetchAndStoreAssetData() {
             },
         ]);
 
-        const results = await client.multicall({ contracts: calls });
+        const results = await publicClient.multicall({ contracts: calls });
 
-        // process results in pairs (nav, apy) for each symbol
         for (let i = 0; i < SYMBOLS.length; i++) {
             const symbol = SYMBOLS[i];
             const navResult = results[i * 2];
@@ -76,17 +161,12 @@ async function fetchAndStoreAssetData() {
                 continue;
             }
 
-            // nav is int256 with 8 decimals → convert to human readable
-            // e.g. 100450000n → 1.00450000
             const navRaw = navResult.result;
             const nav = Number(navRaw) / 1e8;
 
-            // apy is uint256 in basis points → convert to percentage
-            // e.g. 450n → 4.50
             const apyRaw = apyResult.result;
             const yieldApy = Number(apyRaw) / 100;
 
-            // upsert into assets table
             await pool.query(
                 `UPDATE assets
          SET nav = $1, yield_apy = $2, last_updated = NOW()
@@ -100,18 +180,14 @@ async function fetchAndStoreAssetData() {
         console.log('[Aggregator] ✅ Asset data updated successfully');
     } catch (err) {
         console.error('[Aggregator] ❌ Failed to fetch oracle data:', err.message);
-        // graceful failure — DB keeps last known values
     }
 }
 
-/**
- * Start the cron job (every 5 minutes) and run immediately
- */
 function startCron() {
-    // run immediately on startup
+    initWalletClient();
+
     fetchAndStoreAssetData();
 
-    // schedule every 5 minutes
     cron.schedule('*/5 * * * *', () => {
         console.log('[Aggregator] Cron triggered — refreshing asset data...');
         fetchAndStoreAssetData();

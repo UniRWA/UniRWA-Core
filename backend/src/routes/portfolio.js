@@ -176,12 +176,12 @@ router.get("/api/portfolio", async (req, res) => {
 
     // 3. LiquidityMining.stakedLP(wallet, pool) × 3 pools (3)
     if (LIQUIDITY_MINING_ADDRESS) {
-      for (const token of RWA_TOKENS) {
+      for (const pool of POOLS) {
         contracts.push({
           address: LIQUIDITY_MINING_ADDRESS,
           abi: STAKED_LP_ABI,
           functionName: "stakedLP",
-          args: [walletAddr, token.address],
+          args: [walletAddr, pool.address],
         });
       }
     }
@@ -281,8 +281,8 @@ router.get("/api/portfolio", async (req, res) => {
     // 3. Parse staked LP
     const stakedLP = {};
     if (LIQUIDITY_MINING_ADDRESS) {
-      for (const token of RWA_TOKENS) {
-        stakedLP[token.symbol] = round(safeNumber(results[idx++], 18), 4);
+      for (const pool of POOLS) {
+        stakedLP[pool.symbol] = round(safeNumber(results[idx++], 18), 4);
       }
     }
 
