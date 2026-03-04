@@ -89,4 +89,18 @@ async function mintComplianceNFT(wallet, inquiryId) {
     }
 }
 
-module.exports = { mintComplianceNFT };
+async function isVerifiedOnChain(wallet) {
+    if (!complianceNFTAddress) return false;
+    try {
+        return await publicClient.readContract({
+            address: complianceNFTAddress,
+            abi: COMPLIANCE_NFT_ABI,
+            functionName: 'isVerified',
+            args: [wallet],
+        });
+    } catch {
+        return false;
+    }
+}
+
+module.exports = { mintComplianceNFT, isVerifiedOnChain };
