@@ -57,8 +57,7 @@ app.listen(PORT, () => {
   console.log(`   Assets: http://localhost:${PORT}/api/assets`);
   console.log(`   Pools:  http://localhost:${PORT}/api/pools`);
   console.log(`   Orders: http://localhost:${PORT}/api/orders?token=BUIDL`);
-  console.log(
-    `   Portfolio: http://localhost:${PORT}/api/portfolio?wallet=0x...`,
-  );
+  console.log(`   Portfolio: http://localhost:${PORT}/api/portfolio?wallet=0x...`);
+  console.log(`   Quote:  http://localhost:${PORT}/api/market/quote?token=BUIDL&amount=1000`);
   console.log(`   KYC:    http://localhost:${PORT}/api/kyc/status\n`);
 });
