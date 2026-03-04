@@ -32,6 +32,24 @@ router.get('/api/kyc/status', async (req, res) => {
         }
 
         const row = result.rows[0];
+
+        if (row.status === 'approved') {
+            try {
+                const { isVerifiedOnChain } = require('../services/kycMinter');
+                const onChain = await isVerifiedOnChain(wallet);
+                if (!onChain) {
+                    await pool.query(
+                        `UPDATE kyc_status SET status = 'none' WHERE wallet = $1`,
+                        [normalizedWallet]
+                    );
+                    console.log(`[KYC] Stale approval detected for ${normalizedWallet} — reset to 'none'`);
+                    return res.json({ status: 'none', nftTokenId: null });
+                }
+            } catch (chainErr) {
+                console.error('[KYC] On-chain check failed, returning DB status:', chainErr.message);
+            }
+        }
+
         return res.json({
             status: row.status,
             nftTokenId: row.nft_token_id || null,
