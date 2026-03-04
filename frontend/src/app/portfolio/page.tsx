@@ -21,6 +21,7 @@ import {
     ERC20_ABI,
 } from '@/config/contracts';
 import { useLPStake, useLPUnstake, useLPClaim } from '@/hooks/useLPStaking';
+import { parseRevertReason } from '@/lib/utils';
 
 /* ------------------------------------------------------------------ */
 /*  Types from API                                                     */
@@ -308,7 +309,7 @@ export default function PortfolioPage() {
                 onSuccess: (hash) => { setWithdrawTxHash(hash); },
                 onError: (err) => {
                     setWithdrawingPool(null);
-                    toast.error('Withdraw failed', { description: err.message.slice(0, 100) });
+                    toast.error('Withdraw failed', { description: parseRevertReason(err) });
                 },
             }
         );

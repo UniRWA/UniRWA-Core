@@ -89,11 +89,26 @@ function SkeletonAssetCard() {
 }
 
 function AssetGrid() {
-  const { data: assets, isLoading } = useQuery({
+  const { data: assets, isLoading, isError } = useQuery({
     queryKey: ['assets'],
     queryFn: fetchAssets,
     staleTime: 60_000,
   });
+
+  if (isError) {
+    return (
+      <div className="bg-white rounded-2xl shadow-md p-8 text-center">
+        <p className="text-gray-500 mb-3">Unable to load assets. The backend may be unavailable.</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
+          style={{ background: 'linear-gradient(135deg, #FF5C16, #FF8A50)' }}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   if (isLoading || !assets) {
     return (

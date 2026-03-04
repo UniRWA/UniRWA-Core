@@ -65,7 +65,7 @@ function SkeletonPoolCard() {
 }
 
 export default function PoolsPage() {
-    const { data: pools, isLoading } = useQuery({
+    const { data: pools, isLoading, isError } = useQuery({
         queryKey: ['pools'],
         queryFn: fetchPools,
         staleTime: 60_000,
@@ -98,7 +98,18 @@ export default function PoolsPage() {
                 </Reveal>
 
                 <div className="space-y-6">
-                    {isLoading || !pools ? (
+                    {isError ? (
+                        <div className="bg-white rounded-2xl shadow-md p-8 text-center">
+                            <p className="text-gray-500 mb-3">Unable to load pools. The backend may be unavailable.</p>
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
+                                style={{ background: 'linear-gradient(135deg, #FF5C16, #FF8A50)' }}
+                            >
+                                Retry
+                            </button>
+                        </div>
+                    ) : isLoading || !pools ? (
                         [1, 2, 3].map((n) => <SkeletonPoolCard key={n} />)
                     ) : (
                         pools.map((pool: Pool, i: number) => (

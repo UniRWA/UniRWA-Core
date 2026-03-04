@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { toast } from 'sonner';
 import { ADDRESSES, ROUTER_ABI, ERC20_ABI, USDC_DECIMALS, RWA_DECIMALS } from '@/config/contracts';
+import { parseRevertReason } from '@/lib/utils';
 
 type SwapState = 'idle' | 'approving' | 'waitingApproval' | 'swapping' | 'waitingSwap' | 'success' | 'error';
 
@@ -88,7 +89,7 @@ export function useTradeSwap(onSuccess?: () => void) {
                     },
                     onError: (err) => {
                         setState('error');
-                        setErrorMessage(parseError(err.message));
+                        setErrorMessage(parseRevertReason(err));
                     },
                 }
             );
@@ -108,7 +109,7 @@ export function useTradeSwap(onSuccess?: () => void) {
                     },
                     onError: (err) => {
                         setState('error');
-                        setErrorMessage(parseError(err.message));
+                        setErrorMessage(parseRevertReason(err));
                     },
                 }
             );
@@ -133,7 +134,7 @@ export function useTradeSwap(onSuccess?: () => void) {
                 },
                 onError: (err) => {
                     setState('error');
-                    setErrorMessage(parseError(err.message));
+                    setErrorMessage(parseRevertReason(err));
                 },
             }
         );
@@ -157,11 +158,4 @@ export function useTradeSwap(onSuccess?: () => void) {
     };
 }
 
-function parseError(msg: string): string {
-    if (msg.includes('User rejected')) return 'Transaction rejected by user';
-    if (msg.includes('Slippage exceeded')) return 'Trade failed — slippage exceeded. Try increasing slippage tolerance.';
-    if (msg.includes('KYC required')) return 'KYC verification required';
-    if (msg.includes('Pool not initialized')) return 'No liquidity available for this pair';
-    if (msg.includes('price deviation')) return 'Oracle price check failed — AMM price too far from NAV';
-    return msg.slice(0, 150);
-}
+

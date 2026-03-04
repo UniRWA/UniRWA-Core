@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { toast } from 'sonner';
 import { ADDRESSES, ORDERBOOK_ABI, ERC20_ABI, USDC_DECIMALS, RWA_DECIMALS } from '@/config/contracts';
+import { parseRevertReason } from '@/lib/utils';
 
 type OrderState = 'idle' | 'approving' | 'waitingApproval' | 'placing' | 'waitingPlace' | 'success' | 'error';
 
@@ -97,7 +98,7 @@ export function useOrderbookPlaceOrder(onSuccess?: () => void) {
                     },
                     onError: (err) => {
                         setState('error');
-                        setErrorMessage(parseError(err.message));
+                        setErrorMessage(parseRevertReason(err));
                     },
                 }
             );
@@ -127,7 +128,7 @@ export function useOrderbookPlaceOrder(onSuccess?: () => void) {
                 },
                 onError: (err) => {
                     setState('error');
-                    setErrorMessage(parseError(err.message));
+                    setErrorMessage(parseRevertReason(err));
                 },
             }
         );
@@ -215,7 +216,7 @@ export function useOrderbookCancel(onSuccess?: () => void) {
                 },
                 onError: (err) => {
                     setState('error');
-                    setErrorMessage(parseError(err.message));
+                    setErrorMessage(parseRevertReason(err));
                 },
             }
         );
@@ -236,13 +237,4 @@ export function useOrderbookCancel(onSuccess?: () => void) {
     };
 }
 
-// ─── Error parser ──────────────────────────────────────────────────
-function parseError(msg: string): string {
-    if (msg.includes('User rejected')) return 'Transaction rejected by user';
-    if (msg.includes('KYC required')) return 'KYC verification required';
-    if (msg.includes('Amount must be positive')) return 'Amount must be greater than 0';
-    if (msg.includes('Not order owner')) return 'You can only cancel your own orders';
-    if (msg.includes('Order not active')) return 'This order is no longer active';
-    if (msg.includes('insufficient allowance')) return 'Token approval required — please try again';
-    return msg.slice(0, 150);
-}
+
