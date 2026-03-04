@@ -8,6 +8,15 @@ import "../interfaces/IComplianceNFT.sol";
 import "../interfaces/IMockIssuer.sol";
 import "../interfaces/IsBUIDL.sol";
 
+interface IRouter {
+    function executeSwap(
+        address rwaToken,
+        uint256 amount,
+        bool isSell,
+        uint256 minOut
+    ) external returns (uint256 actualOut);
+}
+
 /**
  * @title FractionalPool
  * @notice ERC-4626 vault for fractional RWA ownership
@@ -35,11 +44,13 @@ contract FractionalPool is ERC4626 {
     IComplianceNFT public immutable complianceNFT;
     IMockIssuer public immutable issuer;
     IsBUIDL public rwaToken;             // Set after purchase
+    IRouter public router;               // Set after Router deployed
     
     // Events
     event PoolFunded(uint256 usdcSpent, uint256 rwaReceived, uint256 timestamp);
     event Deposited(address indexed user, uint256 assets, uint256 shares);
     event Withdrawn(address indexed user, uint256 shares, uint256 assets);
+    event RouterSet(address indexed router);
     
     /**
      * @notice Initialize the fractional pool
@@ -149,6 +160,16 @@ contract FractionalPool is ERC4626 {
     }
     
     /**
+     * @notice Set Router address for post-funding withdrawals
+     * @param router_ Router contract address
+     */
+    function setRouter(address router_) external {
+        require(router_ != address(0), "Invalid router address");
+        router = IRouter(router_);
+        emit RouterSet(router_);
+    }
+    
+    /**
      * @notice Withdraw from pool (override ERC4626)
      * @dev Burns shares, returns USDC
      * If pool funded: sells RWA on AMM first (stub for now)
@@ -164,10 +185,43 @@ contract FractionalPool is ERC4626 {
             // Pool not funded yet - just return USDC
             shares = super.withdraw(assets, receiver, owner);
         } else {
-            // Pool is funded - need to sell RWA for USDC
-            // TODO (Day 6): Integrate with HybridAMM to sell RWA tokens
-            // For now, revert to prevent withdrawals after funding
-            revert("Withdrawals after funding require AMM - coming Day 6");
+            // Pool is funded - sell RWA on AMM via Router
+            require(address(router) != address(0), "Router not set");
+            require(address(rwaToken) != address(0), "RWA token not set");
+            
+            // Calculate how many shares correspond to the requested USDC amount
+            shares = previewWithdraw(assets);
+            require(shares > 0, "Zero shares");
+            
+            // Check owner allowance if not self
+            if (msg.sender != owner) {
+                uint256 allowed = allowance(owner, msg.sender);
+                require(allowed >= shares, "ERC4626: withdraw exceeds allowance");
+                _approve(owner, msg.sender, allowed - shares);
+            }
+            
+            // Burn shares
+            _burn(owner, shares);
+            
+            // Calculate how much RWA to sell (proportional to shares burned)
+            uint256 totalRWA = IERC20(address(rwaToken)).balanceOf(address(this));
+            uint256 rwaToSell = (totalRWA * shares) / (totalSupply() + shares); // +shares since we already burned
+            
+            // Approve Router to spend RWA tokens
+            IERC20(address(rwaToken)).safeIncreaseAllowance(address(router), rwaToSell);
+            
+            // Sell RWA → USDC via Router (isSell = true)
+            // minOut = assets * 95 / 100 → 5% slippage tolerance
+            uint256 minOut = (assets * 95) / 100;
+            uint256 usdcReceived = router.executeSwap(
+                address(rwaToken),
+                rwaToSell,
+                true,  // isSell
+                minOut
+            );
+            
+            // Transfer USDC to receiver
+            IERC20(asset()).safeTransfer(receiver, usdcReceived);
         }
         
         emit Withdrawn(owner, shares, assets);
