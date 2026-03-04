@@ -27,6 +27,15 @@ interface IChainlinkOracle {
             uint80 answeredInRound
         );
 
+    /**
+     * @notice Get latest price data for a specific token symbol
+     * @param symbol Token symbol (e.g., "BUIDL", "BENJI", "OUSG")
+     * @return roundId The round ID
+     * @return answer The NAV price (8 decimals)
+     * @return startedAt Timestamp when the round started
+     * @return updatedAt Timestamp when the round was updated
+     * @return answeredInRound The round ID when the answer was computed
+     */
     function getLatestRoundData(string memory symbol)
         external
         view

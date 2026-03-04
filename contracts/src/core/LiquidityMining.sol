@@ -8,6 +8,12 @@ interface IHybridAMM {
     function lpBalances(address user, address token) external view returns (uint256);
 }
 
+/**
+ * @title LiquidityMining
+ * @notice AVAX reward distribution for LP token stakers
+ * @dev Users stake their HybridAMM LP positions to earn AVAX rewards proportional to share of total stake.
+ *      KYC-gated via ComplianceNFT. Reward rate configurable by owner.
+ */
 contract LiquidityMining is Ownable {
 
     IHybridAMM public immutable amm;
@@ -31,6 +37,12 @@ contract LiquidityMining is Ownable {
     event AvaxPerSecondUpdated(uint256 oldRate, uint256 newRate);
     event PoolRegistered(address indexed lpPool);
 
+    /**
+     * @notice Initialize the LiquidityMining contract
+     * @param amm_ HybridAMM contract address (source of LP balances)
+     * @param complianceNFT_ ComplianceNFT contract for KYC verification
+     * @param avaxPerSecond_ AVAX reward emission rate per second (18 decimals)
+     */
     constructor(
         address amm_,
         address complianceNFT_,
@@ -44,8 +56,14 @@ contract LiquidityMining is Ownable {
         avaxPerSecond = avaxPerSecond_;
     }
 
+    /// @notice Accept AVAX deposits to fund reward pool
     receive() external payable {}
 
+    /**
+     * @notice Stake LP tokens to earn AVAX rewards
+     * @param lpPool Address of the RWA token whose LP position to stake
+     * @param amount Amount of LP tokens to stake
+     */
     function stake(address lpPool, uint256 amount) external {
         require(complianceNFT.isVerified(msg.sender), "KYC required");
         require(amount > 0, "Amount must be positive");
@@ -72,6 +90,11 @@ contract LiquidityMining is Ownable {
         emit Staked(msg.sender, lpPool, amount);
     }
 
+    /**
+     * @notice Unstake LP tokens and claim pending rewards
+     * @param lpPool Address of the RWA token whose LP position to unstake
+     * @param amount Amount of LP tokens to unstake
+     */
     function unstake(address lpPool, uint256 amount) external {
         require(amount > 0, "Amount must be positive");
         require(stakedLP[msg.sender][lpPool] >= amount, "Insufficient staked balance");
@@ -86,10 +109,16 @@ contract LiquidityMining is Ownable {
         emit Unstaked(msg.sender, lpPool, amount);
     }
 
+    /// @notice Claim all pending AVAX rewards for the caller
     function claimRewards() external {
         _claimPending(msg.sender);
     }
 
+    /**
+     * @notice View pending AVAX rewards for a user
+     * @param user Address to check pending rewards for
+     * @return pending Amount of AVAX rewards claimable (18 decimals)
+     */
     function pendingRewards(address user) external view returns (uint256 pending) {
         if (totalStakedAllPools == 0 || lastStakeTime[user] == 0) {
             return 0;
@@ -140,11 +169,23 @@ contract LiquidityMining is Ownable {
         }
     }
 
+    /**
+     * @notice Update AVAX reward emission rate
+     * @param newRate New AVAX per second rate (18 decimals)
+     */
     function setAvaxPerSecond(uint256 newRate) external onlyOwner {
         emit AvaxPerSecondUpdated(avaxPerSecond, newRate);
         avaxPerSecond = newRate;
     }
 
+    /**
+     * @notice Get global staking statistics
+     * @return rate Current AVAX emission rate per second
+     * @return totalStakedAll Total LP tokens staked across all pools
+     * @return rewardsBalance AVAX balance available for rewards
+     * @return rewardsPaid Total AVAX rewards distributed to date
+     * @return poolCount Number of registered LP pools
+     */
     function getStakingInfo() external view returns (
         uint256 rate,
         uint256 totalStakedAll,
@@ -161,6 +202,15 @@ contract LiquidityMining is Ownable {
         );
     }
 
+    /**
+     * @notice Get staking details for a specific user and pool
+     * @param user User wallet address
+     * @param lpPool RWA token address for the LP pool
+     * @return staked LP tokens staked by user in this pool
+     * @return totalUserStake Total LP tokens staked by user across all pools
+     * @return pending Pending AVAX rewards claimable
+     * @return lastTime Timestamp of user's last stake/unstake/claim action
+     */
     function getUserInfo(address user, address lpPool) external view returns (
         uint256 staked,
         uint256 totalUserStake,
