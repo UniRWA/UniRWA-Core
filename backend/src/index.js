@@ -15,14 +15,23 @@ const portfolioRoutes = require("./routes/portfolio");
 const { startCron } = require("./services/aggregatorService");
 const keeperBot = require("./services/keeperBot");
 const yieldSimulator = require("./services/yieldSimulator");
+const oracleUpdater = require("./services/oracleUpdater");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // middleware
+const allowedOrigins = [
+  'http://localhost:3000',
+  process.env.FRONTEND_URL,
+  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+  process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : null,
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "*",
+    origin: allowedOrigins.length > 0 ? allowedOrigins : '*',
+    credentials: true,
   }),
 );
 app.use(morgan("dev"));
@@ -49,6 +58,7 @@ app.use("/", portfolioRoutes);
 startCron();
 keeperBot.start();
 yieldSimulator.start();
+oracleUpdater.start();
 
 // start server
 app.listen(PORT, () => {

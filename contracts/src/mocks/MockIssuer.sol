@@ -229,4 +229,17 @@ contract MockIssuer is Ownable {
         );
         require(success, "Mint call failed");
     }
+
+    function rebaseToken(address token) external onlyOwner {
+    (bool success, ) = token.call(
+        abi.encodeWithSignature("rebase()")
+    );
+    require(success, "Rebase call failed");
+}
+function distributeYieldOnToken(address token, uint256 yieldAmount) external onlyOwner {
+    (bool success, ) = token.call(
+        abi.encodeWithSignature("distributeYield(uint256)", yieldAmount)
+    );
+    require(success, "Distribute yield call failed");
+}
 }

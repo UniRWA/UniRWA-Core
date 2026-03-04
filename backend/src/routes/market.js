@@ -167,7 +167,7 @@ router.get("/api/orders", async (req, res) => {
     // ── Cache result ──
     await redisClient
       .setEx(cacheKey, CACHE_TTL, JSON.stringify(response))
-      .catch(() => {});
+      .catch(() => { });
     console.log(
       `[Orders] Fetched ${buys.length} buys + ${sells.length} sells for ${token.toUpperCase()}, cached ${CACHE_TTL}s`,
     );
@@ -176,6 +176,130 @@ router.get("/api/orders", async (req, res) => {
   } catch (err) {
     console.error("[Orders] Error fetching orders:", err.message);
     res.status(500).json({ error: "Failed to fetch orders" });
+  }
+});
+
+
+const ROUTER_ADDRESS = process.env.ROUTER_ADDRESS;
+
+const ROUTER_ABI = [
+  {
+    name: "getBestRoute",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "rwaToken", type: "address" },
+      { name: "amount", type: "uint256" },
+      { name: "isSell", type: "bool" },
+    ],
+    outputs: [
+      { name: "route", type: "uint8" },
+      { name: "expectedOut", type: "uint256" },
+    ],
+  },
+];
+
+const ROUTE_NAMES = { 0: "AMM", 1: "ORDERBOOK" };
+
+
+router.get("/api/market/quote", async (req, res) => {
+  try {
+    const { token, amount, sell } = req.query;
+
+    if (!token || !amount) {
+      return res
+        .status(400)
+        .json({ error: "Missing required params: token and amount" });
+    }
+
+    const tokenAddress = TOKEN_MAP[token.toUpperCase()];
+    if (!tokenAddress) {
+      return res
+        .status(400)
+        .json({ error: `Unknown token: ${token}. Supported: BUIDL, BENJI, OUSG` });
+    }
+
+    if (!ROUTER_ADDRESS) {
+      return res.status(500).json({ error: "ROUTER_ADDRESS not configured" });
+    }
+
+    const isSell = sell === "true";
+    const amountRaw = isSell
+      ? BigInt(Math.floor(parseFloat(amount) * 1e18))
+      : BigInt(Math.floor(parseFloat(amount) * 1e6));
+
+    const result = await client.readContract({
+      address: ROUTER_ADDRESS,
+      abi: ROUTER_ABI,
+      functionName: "getBestRoute",
+      args: [tokenAddress, amountRaw, isSell],
+    });
+
+    const [routeEnum, expectedOut] = result;
+    const routeName = ROUTE_NAMES[Number(routeEnum)] || "AMM";
+    const expectedOutHuman = isSell
+      ? Number(expectedOut) / 1e6
+      : Number(expectedOut) / 1e18;
+
+    res.json({
+      token: token.toUpperCase(),
+      route: routeName,
+      expectedOut: expectedOutHuman,
+      rawExpectedOut: expectedOut.toString(),
+      isSell,
+      inputAmount: parseFloat(amount),
+    });
+  } catch (err) {
+    console.error("[Quote] Error fetching quote:", err.message);
+    res.status(500).json({ error: "Failed to fetch quote" });
+  }
+});
+
+
+const dbPool = require("../db/pool");
+
+let referralTableReady = false;
+
+async function ensureReferralTable() {
+  if (referralTableReady) return;
+  try {
+    await dbPool.query(`
+      CREATE TABLE IF NOT EXISTS referral_clicks (
+        id SERIAL PRIMARY KEY,
+        wallet VARCHAR(42),
+        asset VARCHAR(20),
+        issuer_url TEXT,
+        clicked_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    referralTableReady = true;
+  } catch (err) {
+    console.warn("[Referral] Could not create table:", err.message);
+  }
+}
+
+router.post("/api/referral/track", async (req, res) => {
+  try {
+    await ensureReferralTable();
+
+    const { wallet, asset, issuerUrl } = req.body;
+
+    if (!wallet || !asset) {
+      return res
+        .status(400)
+        .json({ error: "Missing required fields: wallet and asset" });
+    }
+
+    await dbPool.query(
+      `INSERT INTO referral_clicks (wallet, asset, issuer_url) VALUES ($1, $2, $3)`,
+      [wallet, asset.toUpperCase(), issuerUrl || null]
+    );
+
+    console.log(`[Referral] Tracked click: ${wallet} → ${asset}`);
+    res.json({ tracked: true });
+  } catch (err) {
+    console.error("[Referral] Error tracking:", err.message);
+    res.status(500).json({ error: "Failed to track referral" });
   }
 });
 
