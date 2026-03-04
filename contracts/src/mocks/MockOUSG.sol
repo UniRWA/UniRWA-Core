@@ -8,21 +8,18 @@ import "../interfaces/IRWAToken.sol";
 /**
  * @title MockOUSG
  * @notice Mock Ondo OUSG token with REBASING mechanism
- * @dev CRITICAL: balanceOf() override makes this "rebasing"
- * Balance grows automatically without transfers - this is the key feature
- * TEST THIS: Stake 100 OUSG, simulate a day, check balanceOf grows
+ * @dev balanceOf() override makes this "rebasing" — balance grows automatically
+ *      without transfers as rebaseIndex increases daily.
  */
 contract MockOUSG is ERC20, Ownable, IRWAToken {
-    // Rebase index - starts at 1.0 (1e18), increases to simulate yield
+    /// @notice Rebase multiplier, starts at 1.0 (1e18), increases to simulate yield
     uint256 public rebaseIndex = 1e18;
     
-    // Internal balances (before rebase multiplication)
     mapping(address => uint256) private _internalBalances;
     uint256 private _internalTotalSupply;
     
-    // NAV and yield
-    uint256 private _currentNAV = 1.0023e18;  // Starts at $1.0023
-    uint256 private _yieldAPY = 485;           // 4.85% APY
+    uint256 private _currentNAV = 1.0023e18;
+    uint256 private _yieldAPY = 485;
     uint256 public lastYieldDistribution;
     uint256 public lastRebase;
     
@@ -31,36 +28,42 @@ contract MockOUSG is ERC20, Ownable, IRWAToken {
         lastRebase = block.timestamp;
     }
     
+    /// @notice Get current Net Asset Value per token
+    /// @return NAV in 18 decimals (e.g., 1.0023e18 = $1.0023)
     function getCurrentNAV() external view override returns (uint256) {
         return _currentNAV;
     }
     
+    /// @notice Get current Annual Percentage Yield
+    /// @return APY in basis points (e.g., 485 = 4.85%)
     function getYieldAPY() external view override returns (uint256) {
         return _yieldAPY;
     }
     
+    /// @notice Check if address is whitelisted (OUSG has no whitelist, always returns true)
+    /// @return Always true
     function isWhitelisted(address) external pure override returns (bool) {
-        return true; // OUSG has no whitelist
+        return true;
     }
     
     /**
      * @notice Override balanceOf to apply rebase multiplier
-     * @dev This is what makes OUSG "rebasing" - balance grows without transfers
+     * @param account Address to query balance for
+     * @return Rebased balance (internal balance × rebaseIndex)
      */
     function balanceOf(address account) public view override returns (uint256) {
         return (_internalBalances[account] * rebaseIndex) / 1e18;
     }
     
-    /**
-     * @notice Override totalSupply to apply rebase multiplier
-     */
+    /// @notice Override totalSupply to apply rebase multiplier
+    /// @return Rebased total supply
     function totalSupply() public view override returns (uint256) {
         return (_internalTotalSupply * rebaseIndex) / 1e18;
     }
     
     /**
-     * @notice Rebase - increases rebaseIndex to simulate yield accrual
-     * @dev Callable daily, simulates 0.013% daily yield (4.85% APY)
+     * @notice Rebase — increases rebaseIndex to simulate daily yield accrual
+     * @dev Callable once per day, simulates ~0.013% daily yield (4.85% APY)
      */
     function rebase() external onlyOwner {
         require(
@@ -68,9 +71,7 @@ contract MockOUSG is ERC20, Ownable, IRWAToken {
             "Must wait 1 day between rebases"
         );
         
-        // Daily rebase: 4.85% APY ≈ 0.013% per day
-        // New index = old index * 1.00013
-        uint256 dailyRate = 13; // 0.013% in basis points * 100
+        uint256 dailyRate = 13;
         uint256 increase = (rebaseIndex * dailyRate) / 100000;
         
         rebaseIndex += increase;
@@ -80,11 +81,11 @@ contract MockOUSG is ERC20, Ownable, IRWAToken {
     }
     
     /**
-     * @notice Mint tokens (owner only, for demo)
-     * @dev Mints to internal balance, actual balance = internal * rebaseIndex
+     * @notice Mint OUSG tokens (owner only, for demo)
+     * @param to Recipient address
+     * @param amount Amount to mint (18 decimals, in rebased terms)
      */
     function mint(address to, uint256 amount) external onlyOwner {
-        // Convert amount to internal balance
         uint256 internalAmount = (amount * 1e18) / rebaseIndex;
         
         _internalBalances[to] += internalAmount;
@@ -94,7 +95,8 @@ contract MockOUSG is ERC20, Ownable, IRWAToken {
     }
     
     /**
-     * @notice Distribute yield (for compatibility with IRWAToken)
+     * @notice Distribute yield (for IRWAToken interface compatibility)
+     * @dev For OUSG, yield distribution happens via rebase(), this just updates timestamp
      */
     function distributeYield(uint256) external override onlyOwner {
         require(
@@ -102,24 +104,18 @@ contract MockOUSG is ERC20, Ownable, IRWAToken {
             "Must wait 30 days"
         );
         
-        // For OUSG, yield distribution happens via rebase
-        // This function just updates timestamp for compatibility
         lastYieldDistribution = block.timestamp;
         
         emit YieldDistributed(0, _currentNAV);
     }
     
-    /**
-     * @notice Override _update to work with internal balances
-     */
+    /// @notice Override _update to work with internal rebased balances
     function _update(address from, address to, uint256 value) internal override {
         if (from == address(0)) {
-            // Minting - handled in mint()
             return;
         }
         
         if (to == address(0)) {
-            // Burning
             uint256 internalAmount = (value * 1e18) / rebaseIndex;
             _internalBalances[from] -= internalAmount;
             _internalTotalSupply -= internalAmount;
@@ -128,7 +124,6 @@ contract MockOUSG is ERC20, Ownable, IRWAToken {
             return;
         }
         
-        // Transfer
         uint256 internalAmount = (value * 1e18) / rebaseIndex;
         
         require(_internalBalances[from] >= internalAmount, "Insufficient balance");
@@ -139,19 +134,23 @@ contract MockOUSG is ERC20, Ownable, IRWAToken {
         emit Transfer(from, to, value);
     }
     
-    /**
-     * @notice Get internal balance (for debugging)
-     */
+    /// @notice Get internal balance before rebase multiplier (for debugging)
+    /// @param account Address to query
+    /// @return Internal (pre-rebase) balance
     function internalBalanceOf(address account) external view returns (uint256) {
         return _internalBalances[account];
     }
     
+    /// @notice Update NAV manually (for demo/testing)
+    /// @param newNAV New NAV in 18 decimals
     function setNAV(uint256 newNAV) external onlyOwner {
         require(newNAV > 0, "NAV must be positive");
         _currentNAV = newNAV;
         emit NAVUpdated(newNAV);
     }
     
+    /// @notice Update APY (for demo/testing)
+    /// @param newAPY New APY in basis points
     function setAPY(uint256 newAPY) external onlyOwner {
         require(newAPY <= 10000, "APY cannot exceed 100%");
         _yieldAPY = newAPY;

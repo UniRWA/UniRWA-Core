@@ -230,16 +230,21 @@ contract MockIssuer is Ownable {
         require(success, "Mint call failed");
     }
 
+    /// @notice Trigger rebase on a rebasing RWA token (e.g., MockOUSG)
+    /// @param token Mock RWA token address
     function rebaseToken(address token) external onlyOwner {
-    (bool success, ) = token.call(
-        abi.encodeWithSignature("rebase()")
-    );
-    require(success, "Rebase call failed");
-}
-function distributeYieldOnToken(address token, uint256 yieldAmount) external onlyOwner {
-    (bool success, ) = token.call(
-        abi.encodeWithSignature("distributeYield(uint256)", yieldAmount)
-    );
-    require(success, "Distribute yield call failed");
-}
+        (bool success, ) = token.call(
+            abi.encodeWithSignature("rebase()")
+        );
+        require(success, "Rebase call failed");
+    }
+    /// @notice Distribute yield on a mock RWA token (admin proxy)
+    /// @param token Mock RWA token address
+    /// @param yieldAmount Yield amount to distribute
+    function distributeYieldOnToken(address token, uint256 yieldAmount) external onlyOwner {
+        (bool success, ) = token.call(
+            abi.encodeWithSignature("distributeYield(uint256)", yieldAmount)
+        );
+        require(success, "Distribute yield call failed");
+    }
 }

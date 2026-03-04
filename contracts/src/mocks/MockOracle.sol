@@ -117,10 +117,14 @@ contract MockOracle is IChainlinkOracle, Ownable {
         return data.apy;
     }
     
+    /// @notice Get price feed decimals (Chainlink standard is 8)
+    /// @return Decimal count (always 8)
     function decimals() external pure override returns (uint8) {
         return DECIMALS;
     }
     
+    /// @notice Get price feed description
+    /// @return Human-readable description of this oracle
     function description() external pure override returns (string memory) {
         return "MockOracle for RWA NAV prices";
     }

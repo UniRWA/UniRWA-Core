@@ -348,7 +348,7 @@ router.get("/api/portfolio", async (req, res) => {
     // Cache
     await redisClient
       .setEx(cacheKey, CACHE_TTL, JSON.stringify(response))
-      .catch(() => {});
+      .catch(() => { });
     console.log(
       `[Portfolio] Fetched for ${walletAddr.slice(0, 8)}…, totalValue=$${totalPortfolioValue}, cached ${CACHE_TTL}s`,
     );
@@ -427,7 +427,7 @@ router.get("/api/portfolio/history", async (req, res) => {
 
     await redisClient
       .setEx(cacheKey, CACHE_TTL, JSON.stringify(response))
-      .catch(() => {});
+      .catch(() => { });
     console.log(
       `[Portfolio] History for ${wallet.slice(0, 8)}… — ${events.length} events (total: ${totalCount})`,
     );
@@ -459,7 +459,7 @@ function formatEventType(eventName) {
     SwapExecuted: "Swap",
     OrderPlaced: "Order",
     OrderCancelled: "Cancel",
-    OrderMatched: "Trade",
+    OrdersMatched: "Trade",
     Staked: "Stake",
     Unstaked: "Unstake",
     Claimed: "Claim",
