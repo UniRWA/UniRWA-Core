@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { toast } from 'sonner';
 import { ADDRESSES, LIQUIDITY_MINING_ABI } from '@/config/contracts';
+import { parseRevertReason } from '@/lib/utils';
 
 type StakeState = 'idle' | 'staking' | 'waitingStake' | 'success' | 'error';
 type ClaimState = 'idle' | 'claiming' | 'waitingClaim' | 'success' | 'error';
@@ -55,7 +56,7 @@ export function useLPStake(onSuccess?: () => void) {
                 },
                 onError: (err) => {
                     setState('error');
-                    setErrorMessage(parseStakingError(err.message));
+                    setErrorMessage(parseRevertReason(err));
                 },
             }
         );
@@ -119,7 +120,7 @@ export function useLPUnstake(onSuccess?: () => void) {
                 },
                 onError: (err) => {
                     setState('error');
-                    setErrorMessage(parseStakingError(err.message));
+                    setErrorMessage(parseRevertReason(err));
                 },
             }
         );
@@ -183,7 +184,7 @@ export function useLPClaim(onSuccess?: () => void) {
                 },
                 onError: (err) => {
                     setState('error');
-                    setErrorMessage(parseStakingError(err.message));
+                    setErrorMessage(parseRevertReason(err));
                 },
             }
         );
@@ -198,13 +199,4 @@ export function useLPClaim(onSuccess?: () => void) {
     return { state, errorMessage, txHash, claimRewards, reset };
 }
 
-// ─── Error parser ──────────────────────────────────────────────────
-function parseStakingError(msg: string): string {
-    if (msg.includes('User rejected')) return 'Transaction rejected by user';
-    if (msg.includes('KYC required')) return 'KYC verification required';
-    if (msg.includes('Insufficient LP balance')) return 'Insufficient LP balance on AMM';
-    if (msg.includes('Insufficient staked balance')) return 'Not enough staked LP tokens';
-    if (msg.includes('Amount must be positive')) return 'Amount must be greater than 0';
-    if (msg.includes('AVAX transfer failed')) return 'AVAX reward transfer failed — contract may be underfunded';
-    return msg.slice(0, 150);
-}
+

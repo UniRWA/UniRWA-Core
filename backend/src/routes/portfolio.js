@@ -456,6 +456,7 @@ function formatEventType(eventName) {
     Deposited: "Deposit",
     Withdrawn: "Withdraw",
     PoolFunded: "Pool Funded",
+    Swap: "Swap",
     SwapExecuted: "Swap",
     OrderPlaced: "Order",
     OrderCancelled: "Cancel",
